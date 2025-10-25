@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "Iriz",
+    "slug": "iriz-signboard-reader",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo/iriz-high-resolution-logo-transparent-blue.png",
+    "splash": {
+      "image": "./assets/logo/iriz-high-resolution-logo-transparent-blue.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.iriz.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app needs camera access to capture signboard images for text extraction.",
+        "NSMicrophoneUsageDescription": "This app needs microphone access for voice feedback features.",
+        "NSSpeechRecognitionUsageDescription": "This app uses speech recognition for accessibility features."
+      }
+    },
+    "android": {
+      "package": "com.iriz.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo/iriz-high-resolution-logo-transparent-blue.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "scheme": "iriz",
+    "web": {
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Iriz to access your camera to capture signboard images."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "af275642-f531-4d8c-9dff-5d2cd235eea0"
+      }
+    }
+  }
+}
