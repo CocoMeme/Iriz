@@ -11,6 +11,7 @@ import HistoryScreen from './src/screens/HistoryScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import SplashScreen from './src/screens/SplashScreen';
+import CustomHeader from './src/components/CustomHeader';
 
 const Stack = createStackNavigator();
 
@@ -43,14 +44,14 @@ export default function App() {
 
   return (
     <NavigationContainer>
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
       <Stack.Navigator
         initialRouteName="Login"
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#2196F3',
+            backgroundColor: '#0247ae',
           },
-          headerTintColor: '#fff',
+          headerTintColor: '#ffffff',
           headerTitleStyle: {
             fontWeight: 'bold',
           },
@@ -64,7 +65,9 @@ export default function App() {
         <Stack.Screen 
           name="Home" 
           component={HomeScreen}
-          options={{ title: 'Iriz - Signboard Reader' }}
+          options={{ 
+            header: () => <CustomHeader />
+          }}
         />
         <Stack.Screen 
           name="Camera" 
