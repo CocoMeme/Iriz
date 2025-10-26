@@ -11,6 +11,7 @@ import {
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useNavigation } from '@react-navigation/native';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
+import { extractTextFromImage } from '../services/ocrService';
 
 export default function CameraScreen() {
   const navigation = useNavigation();
@@ -53,21 +54,52 @@ export default function CameraScreen() {
     try {
       setIsProcessing(true);
 
+      // Capture the photo
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
         base64: false,
         exif: false,
       });
 
-      // Simulate OCR processing
-      setTimeout(() => {
+      console.log('Photo captured:', photo.uri);
+
+      // Perform OCR on the captured image
+      try {
+        const ocrResult = await extractTextFromImage(photo.uri);
+        
+        console.log('OCR Result:', {
+          textLength: ocrResult.text.length,
+          confidence: ocrResult.confidence,
+        });
+
         setIsProcessing(false);
+
+        // Check if text was extracted
+        if (!ocrResult.text || ocrResult.text.trim().length === 0) {
+          Alert.alert(
+            'No Text Found',
+            'Could not detect any text in the image. Please ensure the signboard is clear and well-lit.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+
+        // Navigate to result screen with extracted text
         navigation.navigate('Result', {
           imageUri: photo.uri,
-          extractedText: 'Sample extracted text from signboard.\n\nThis is a demo text that would normally come from OCR processing.',
+          extractedText: ocrResult.text,
+          confidence: ocrResult.confidence,
           timestamp: new Date().toISOString(),
         });
-      }, 2000);
+      } catch (ocrError) {
+        setIsProcessing(false);
+        console.error('OCR processing error:', ocrError);
+        Alert.alert(
+          'OCR Error',
+          'Failed to extract text from the image. Please try again with better lighting or a clearer view.',
+          [{ text: 'OK' }]
+        );
+      }
     } catch (error) {
       setIsProcessing(false);
       Alert.alert('Error', 'Failed to capture image. Please try again.');
@@ -166,7 +198,8 @@ export default function CameraScreen() {
             {isProcessing ? (
               <View style={styles.processingContainer}>
                 <ActivityIndicator size="large" color="#fff" />
-                <Text style={styles.processingText}>Processing image...</Text>
+                <Text style={styles.processingText}>Extracting text...</Text>
+                <Text style={styles.processingSubtext}>This may take a moment</Text>
               </View>
             ) : (
               <TouchableOpacity
@@ -341,6 +374,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 15,
     fontWeight: '600',
+  },
+  processingSubtext: {
+    color: '#E3F2FD',
+    fontSize: 14,
+    marginTop: 5,
   },
   permissionText: {
     fontSize: 16,

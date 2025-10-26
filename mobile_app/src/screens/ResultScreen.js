@@ -15,7 +15,7 @@ import * as Speech from 'expo-speech';
 export default function ResultScreen() {
   const route = useRoute();
   const navigation = useNavigation();
-  const { imageUri, extractedText, timestamp } = route.params || {};
+  const { imageUri, extractedText, confidence, timestamp } = route.params || {};
   
   const [isSpeaking, setIsSpeaking] = useState(false);
 
@@ -99,11 +99,31 @@ export default function ResultScreen() {
           </Text>
         </View>
 
-        {timestamp && (
-          <Text style={styles.timestamp}>
-            Captured: {new Date(timestamp).toLocaleString()}
-          </Text>
-        )}
+        <View style={styles.metadataContainer}>
+          {confidence !== undefined && (
+            <View style={styles.confidenceContainer}>
+              <Text style={styles.metadataLabel}>Confidence:</Text>
+              <View style={styles.confidenceBar}>
+                <View 
+                  style={[
+                    styles.confidenceBarFill, 
+                    { 
+                      width: `${confidence}%`,
+                      backgroundColor: confidence > 70 ? '#4CAF50' : confidence > 40 ? '#FFC107' : '#F44336'
+                    }
+                  ]} 
+                />
+              </View>
+              <Text style={styles.confidenceText}>{confidence.toFixed(1)}%</Text>
+            </View>
+          )}
+          
+          {timestamp && (
+            <Text style={styles.timestamp}>
+              Captured: {new Date(timestamp).toLocaleString()}
+            </Text>
+          )}
+        </View>
       </View>
 
       <View style={styles.actions}>
@@ -207,11 +227,38 @@ const styles = StyleSheet.create({
     color: '#333',
     lineHeight: 24,
   },
+  metadataContainer: {
+    marginTop: 15,
+  },
+  confidenceContainer: {
+    marginBottom: 10,
+  },
+  metadataLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5,
+    fontWeight: '600',
+  },
+  confidenceBar: {
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 5,
+  },
+  confidenceBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  confidenceText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '600',
+  },
   timestamp: {
     fontSize: 12,
     color: '#999',
-    marginTop: 10,
-    textAlign: 'center',
+    marginTop: 5,
   },
   actions: {
     flexDirection: 'row',
