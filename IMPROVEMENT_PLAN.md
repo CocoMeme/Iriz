@@ -13,12 +13,11 @@
 ### ⚠️ What Needs Work
 1. **SQLite Storage** - Not implemented (only stubs)
 2. **History Persistence** - No actual data saving
-3. **Authentication** - Login screen present but not connected
-4. **Backend Integration** - No API communication
-5. **Error Recovery** - Basic but could be better
-6. **Image Management** - No local image caching
-7. **Performance** - OCR could be optimized
-8. **Offline Support** - Limited functionality offline
+3. **Backend Integration** - No API communication
+4. **Error Recovery** - Basic but could be better
+5. **Image Management** - No local image caching
+6. **Performance** - OCR could be optimized
+7. **Offline Support** - Limited functionality offline
 
 ---
 
@@ -194,6 +193,7 @@
 
 ---
 
+### Let's not implement Priority 4.1 and 4.2 until later:
 ### Priority 4: Backend Integration (Later)
 
 #### 4.1 Authentication System ⭐⭐⭐⭐

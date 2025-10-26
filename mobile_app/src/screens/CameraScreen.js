@@ -11,7 +11,7 @@ import {
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useNavigation } from '@react-navigation/native';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
-import { extractTextFromImage } from '../services/ocrService';
+import Icon from '../components/Icon';
 
 export default function CameraScreen() {
   const navigation = useNavigation();
@@ -19,6 +19,7 @@ export default function CameraScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [facing, setFacing] = useState('back');
   const [zoom, setZoom] = useState(0);
+  const [flash, setFlash] = useState('off');
   const cameraRef = useRef(null);
 
   useEffect(() => {
@@ -62,44 +63,12 @@ export default function CameraScreen() {
       });
 
       console.log('Photo captured:', photo.uri);
+      setIsProcessing(false);
 
-      // Perform OCR on the captured image
-      try {
-        const ocrResult = await extractTextFromImage(photo.uri);
-        
-        console.log('OCR Result:', {
-          textLength: ocrResult.text.length,
-          confidence: ocrResult.confidence,
-        });
-
-        setIsProcessing(false);
-
-        // Check if text was extracted
-        if (!ocrResult.text || ocrResult.text.trim().length === 0) {
-          Alert.alert(
-            'No Text Found',
-            'Could not detect any text in the image. Please ensure the signboard is clear and well-lit.',
-            [{ text: 'OK' }]
-          );
-          return;
-        }
-
-        // Navigate to result screen with extracted text
-        navigation.navigate('Result', {
-          imageUri: photo.uri,
-          extractedText: ocrResult.text,
-          confidence: ocrResult.confidence,
-          timestamp: new Date().toISOString(),
-        });
-      } catch (ocrError) {
-        setIsProcessing(false);
-        console.error('OCR processing error:', ocrError);
-        Alert.alert(
-          'OCR Error',
-          'Failed to extract text from the image. Please try again with better lighting or a clearer view.',
-          [{ text: 'OK' }]
-        );
-      }
+      // Navigate to crop screen
+      navigation.navigate('ImageCrop', {
+        imageUri: photo.uri,
+      });
     } catch (error) {
       setIsProcessing(false);
       Alert.alert('Error', 'Failed to capture image. Please try again.');
@@ -109,6 +78,25 @@ export default function CameraScreen() {
 
   const toggleCameraFacing = () => {
     setFacing(current => (current === 'back' ? 'front' : 'back'));
+  };
+
+  const toggleFlash = () => {
+    setFlash(current => {
+      if (current === 'off') return 'on';
+      if (current === 'on') return 'auto';
+      return 'off';
+    });
+  };
+
+  const getFlashIcon = () => {
+    switch (flash) {
+      case 'on':
+        return 'flash';
+      case 'auto':
+        return 'flash-outline';
+      default:
+        return 'flash-off';
+    }
   };
 
   const handlePinchGesture = (event) => {
@@ -143,6 +131,7 @@ export default function CameraScreen() {
             facing={facing}
             ref={cameraRef}
             zoom={zoom}
+            enableTorch={flash === 'on'}
           >
             <View style={styles.overlay}>
               <View style={styles.topControls}>
@@ -150,16 +139,18 @@ export default function CameraScreen() {
                   style={styles.controlButton}
                   onPress={() => navigation.goBack()}
                 >
-                  <Text style={styles.controlIcon}>✕</Text>
+                  <Icon name="close" family="Ionicons" size={28} color="#fff" />
                 </TouchableOpacity>
+                
                 <View style={styles.zoomIndicator}>
                   <Text style={styles.zoomText}>{(zoom * 10).toFixed(1)}x</Text>
                 </View>
+                
                 <TouchableOpacity
                   style={styles.controlButton}
-                  onPress={toggleCameraFacing}
+                  onPress={toggleFlash}
                 >
-                  <Text style={styles.controlIcon}>🔄</Text>
+                  <Icon name={getFlashIcon()} family="Ionicons" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
 
@@ -171,44 +162,50 @@ export default function CameraScreen() {
           </View>
 
           <View style={styles.instructions}>
+            <Icon name="crop" family="Ionicons" size={20} color="#fff" style={{ marginRight: 8 }} />
             <Text style={styles.instructionText}>
               Align signboard within the frame
-            </Text>
-            <Text style={styles.instructionSubtext}>
-              Ensure good lighting and hold steady
             </Text>
           </View>
 
           <View style={styles.bottomControls}>
-            <View style={styles.zoomControls}>
-              <TouchableOpacity
-                style={styles.zoomButton}
-                onPress={handleZoomOut}
-              >
-                <Text style={styles.zoomButtonText}>-</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.zoomButton}
-                onPress={handleZoomIn}
-              >
-                <Text style={styles.zoomButtonText}>+</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.flipButton}
+              onPress={toggleCameraFacing}
+            >
+              <Icon name="camera-reverse" family="Ionicons" size={28} color="#fff" />
+            </TouchableOpacity>
 
             {isProcessing ? (
               <View style={styles.processingContainer}>
                 <ActivityIndicator size="large" color="#fff" />
-                <Text style={styles.processingText}>Extracting text...</Text>
-                <Text style={styles.processingSubtext}>This may take a moment</Text>
+                <Text style={styles.processingText}>Capturing...</Text>
               </View>
             ) : (
               <TouchableOpacity
                 style={styles.captureButton}
                 onPress={handleCapture}
               >
-                <View style={styles.captureButtonInner} />
+                <View style={styles.captureButtonInner}>
+                  <Icon name="camera" family="Ionicons" size={32} color="#2196F3" />
+                </View>
               </TouchableOpacity>
             )}
+
+            <View style={styles.zoomControls}>
+              <TouchableOpacity
+                style={styles.zoomButton}
+                onPress={handleZoomOut}
+              >
+                <Icon name="remove" family="Ionicons" size={24} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.zoomButton}
+                onPress={handleZoomIn}
+              >
+                <Icon name="add" family="Ionicons" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </CameraView>
@@ -243,10 +240,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  controlIcon: {
-    fontSize: 24,
-    color: '#fff',
   },
   zoomIndicator: {
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -305,7 +298,9 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 20,
   },
   instructions: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     padding: 20,
   },
   instructionText: {
@@ -313,72 +308,70 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 5,
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10,
-  },
-  instructionSubtext: {
-    color: '#E3F2FD',
-    fontSize: 14,
-    textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: -1, height: 1 },
     textShadowRadius: 10,
   },
   bottomControls: {
+    flexDirection: 'row',
     paddingBottom: Platform.OS === 'ios' ? 40 : 30,
     alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 20,
   },
-  zoomControls: {
-    flexDirection: 'row',
-    gap: 20,
-    marginBottom: 20,
-  },
-  zoomButton: {
+  flipButton: {
     width: 50,
     height: 50,
     borderRadius: 25,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
   },
-  zoomButtonText: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: 'bold',
+  zoomControls: {
+    flexDirection: 'column',
+    gap: 10,
+  },
+  zoomButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   captureButton: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.9)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
     borderColor: '#fff',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   captureButtonInner: {
     width: 60,
     height: 60,
     borderRadius: 30,
     backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   processingContainer: {
     alignItems: 'center',
   },
   processingText: {
     color: '#fff',
-    fontSize: 16,
-    marginTop: 15,
-    fontWeight: '600',
-  },
-  processingSubtext: {
-    color: '#E3F2FD',
     fontSize: 14,
-    marginTop: 5,
+    marginTop: 10,
+    fontWeight: '600',
   },
   permissionText: {
     fontSize: 16,
