@@ -2,21 +2,49 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
-import { Animated } from 'react-native';
+import { Animated, Alert } from 'react-native';
 
 import HomeScreen from './src/screens/HomeScreen';
 import CameraScreen from './src/screens/CameraScreen';
+import ImageCropScreen from './src/screens/ImageCropScreen';
 import ResultScreen from './src/screens/ResultScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import SplashScreen from './src/screens/SplashScreen';
+import CustomHeader from './src/components/CustomHeader';
+
+// Import storage services
+import { initDatabase } from './src/services/storageService';
+import { initImageCache } from './src/services/imageCacheService';
 
 const Stack = createStackNavigator();
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
   const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    // Initialize database and image cache
+    const initialize = async () => {
+      try {
+        await initDatabase();
+        await initImageCache();
+        console.log('App initialized successfully');
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('App initialization error:', error);
+        Alert.alert(
+          'Initialization Error',
+          'Failed to initialize the app. Please restart.',
+          [{ text: 'OK' }]
+        );
+      }
+    };
+    
+    initialize();
+  }, []);
 
   useEffect(() => {
     // Wait 2 seconds, then fade out
@@ -33,7 +61,7 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  if (showSplash) {
+  if (showSplash || !isInitialized) {
     return (
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
         <SplashScreen />
@@ -43,14 +71,14 @@ export default function App() {
 
   return (
     <NavigationContainer>
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
       <Stack.Navigator
         initialRouteName="Login"
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#2196F3',
+            backgroundColor: '#0247ae',
           },
-          headerTintColor: '#fff',
+          headerTintColor: '#ffffff',
           headerTitleStyle: {
             fontWeight: 'bold',
           },
@@ -64,12 +92,19 @@ export default function App() {
         <Stack.Screen 
           name="Home" 
           component={HomeScreen}
-          options={{ title: 'Iriz - Signboard Reader' }}
+          options={{ 
+            header: () => <CustomHeader />
+          }}
         />
         <Stack.Screen 
           name="Camera" 
           component={CameraScreen}
           options={{ title: 'Capture Signboard' }}
+        />
+        <Stack.Screen 
+          name="ImageCrop" 
+          component={ImageCropScreen}
+          options={{ title: 'Crop & Process' }}
         />
         <Stack.Screen 
           name="Result" 

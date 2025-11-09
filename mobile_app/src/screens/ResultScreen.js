@@ -8,9 +8,13 @@ import {
   Image,
   Alert,
   Share,
+  ActivityIndicator,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import * as Speech from 'expo-speech';
+import { saveCapture } from '../services/storageService';
+import { saveImage } from '../services/imageCacheService';
+import Icon from '../components/Icon';
 
 export default function ResultScreen() {
   const route = useRoute();
@@ -22,10 +26,14 @@ export default function ResultScreen() {
     apiBaseUrl
   } = route.params || {};
 
+  const { imageUri, extractedText, confidence, language, orientation } = route.params || {};
+  
   const [isSpeaking, setIsSpeaking] = useState(false);
 
   // Concatenate all extracted texts
   const allExtractedText = detections?.map(d => d.extracted_text).join('\n\n') || '';
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
     if (allExtractedText) speakText();
@@ -49,9 +57,59 @@ export default function ResultScreen() {
     });
   };
 
-  const handleSave = () => {
-    // TODO: Implement save to SQLite
-    Alert.alert('Saved', 'Result saved to history');
+  const handleSave = async () => {
+    if (isSaving || isSaved) {
+      if (isSaved) {
+        Alert.alert('Already Saved', 'This capture has already been saved to history');
+      }
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      
+      let savedImageUri = null;
+      let thumbnailUri = null;
+      
+      // Save image to permanent storage if exists
+      if (imageUri) {
+        const imageInfo = await saveImage(imageUri);
+        savedImageUri = imageInfo.imageUri;
+        thumbnailUri = imageInfo.thumbnailUri;
+      }
+      
+      // Save to database
+      const captureData = {
+        imageUri: savedImageUri,
+        thumbnailUri: thumbnailUri,
+        text: extractedText || 'No text detected',
+        confidence: confidence || 0,
+        timestamp: timestamp || new Date().toISOString(),
+        language: language || 'eng',
+        orientation: orientation || 0,
+      };
+      
+      const captureId = await saveCapture(captureData);
+      
+      setIsSaving(false);
+      setIsSaved(true);
+      
+      Alert.alert(
+        'Success',
+        'Capture saved to history',
+        [
+          {
+            text: 'View History',
+            onPress: () => navigation.navigate('History'),
+          },
+          { text: 'OK' },
+        ]
+      );
+    } catch (error) {
+      setIsSaving(false);
+      console.error('Save error:', error);
+      Alert.alert('Error', 'Failed to save capture. Please try again.');
+    }
   };
 
   const handleShare = async () => {
@@ -81,6 +139,7 @@ export default function ResultScreen() {
           <Image source={{ uri: boxedImageUri }} style={styles.image} />
         ) : (
           <View style={styles.imagePlaceholder}>
+            <Icon name="image-outline" family="Ionicons" size={48} color="#ccc" />
             <Text style={styles.placeholderText}>No Image</Text>
           </View>
         )}
@@ -121,7 +180,12 @@ export default function ResultScreen() {
         <View style={styles.header}>
           <Text style={styles.headerTitle}>All Extracted Text</Text>
           <TouchableOpacity onPress={speakText} style={styles.speakerButton}>
-            <Text style={styles.speakerIcon}>{isSpeaking ? '🔊' : '🔈'}</Text>
+            <Icon 
+              name={isSpeaking ? 'volume-high' : 'volume-medium'} 
+              family="Ionicons" 
+              size={24} 
+              color="#2196F3" 
+            />
           </TouchableOpacity>
         </View>
         <View style={styles.textBox}>
@@ -129,27 +193,63 @@ export default function ResultScreen() {
             {allExtractedText || 'No text detected in the image'}
           </Text>
         </View>
-        {timestamp && (
-          <Text style={styles.timestamp}>
-            Captured: {new Date(timestamp).toLocaleString()}
-          </Text>
-        )}
+
+        <View style={styles.metadataContainer}>
+          {confidence !== undefined && (
+            <View style={styles.confidenceContainer}>
+              <Text style={styles.metadataLabel}>Confidence:</Text>
+              <View style={styles.confidenceBar}>
+                <View 
+                  style={[
+                    styles.confidenceBarFill, 
+                    { 
+                      width: `${confidence}%`,
+                      backgroundColor: confidence > 70 ? '#4CAF50' : confidence > 40 ? '#FFC107' : '#F44336'
+                    }
+                  ]} 
+                />
+              </View>
+              <Text style={styles.confidenceText}>{confidence.toFixed(1)}%</Text>
+            </View>
+          )}
+          
+          {timestamp && (
+            <Text style={styles.timestamp}>
+              Captured: {new Date(timestamp).toLocaleString()}
+            </Text>
+          )}
+        </View>
       </View>
 
       <View style={styles.actions}>
         <TouchableOpacity
-          style={[styles.actionButton, styles.primaryButton]}
+          style={[styles.actionButton, styles.primaryButton, (isSaving || isSaved) && styles.disabledButton]}
           onPress={handleSave}
+          disabled={isSaving || isSaved}
         >
-          <Text style={styles.actionIcon}>💾</Text>
-          <Text style={styles.primaryButtonText}>Save</Text>
+          {isSaving ? (
+            <>
+              <ActivityIndicator size="small" color="#fff" />
+              <Text style={styles.primaryButtonText}>Saving...</Text>
+            </>
+          ) : (
+            <>
+              <Icon 
+                name={isSaved ? 'checkmark-circle' : 'save'} 
+                family="Ionicons" 
+                size={20} 
+                color="#fff" 
+              />
+              <Text style={styles.primaryButtonText}>{isSaved ? 'Saved' : 'Save'}</Text>
+            </>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.actionButton, styles.secondaryButton]}
           onPress={handleShare}
         >
-          <Text style={styles.actionIcon}>📤</Text>
+          <Icon name="share-social" family="Ionicons" size={20} color="#2196F3" />
           <Text style={styles.secondaryButtonText}>Share</Text>
         </TouchableOpacity>
       </View>
@@ -159,14 +259,16 @@ export default function ResultScreen() {
           style={styles.navButton}
           onPress={handleRetake}
         >
-          <Text style={styles.navButtonText}>📸 Retake</Text>
+          <Icon name="camera" family="Ionicons" size={20} color="#666" />
+          <Text style={styles.navButtonText}>Retake</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navButton}
           onPress={handleHome}
         >
-          <Text style={styles.navButtonText}>🏠 Home</Text>
+          <Icon name="home" family="Ionicons" size={20} color="#666" />
+          <Text style={styles.navButtonText}>Home</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -193,10 +295,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 8,
   },
   placeholderText: {
-    color: '#666',
-    fontSize: 16,
+    color: '#999',
+    fontSize: 14,
   },
   textContainer: {
     padding: 20,
@@ -213,16 +316,13 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   speakerButton: {
-    padding: 10,
-    backgroundColor: '#2196F3',
+    padding: 12,
+    backgroundColor: '#E3F2FD',
     borderRadius: 25,
     width: 50,
     height: 50,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  speakerIcon: {
-    fontSize: 24,
   },
   textBox: {
     backgroundColor: '#fff',
@@ -237,11 +337,38 @@ const styles = StyleSheet.create({
     color: '#333',
     lineHeight: 24,
   },
+  metadataContainer: {
+    marginTop: 15,
+  },
+  confidenceContainer: {
+    marginBottom: 10,
+  },
+  metadataLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5,
+    fontWeight: '600',
+  },
+  confidenceBar: {
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 5,
+  },
+  confidenceBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  confidenceText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '600',
+  },
   timestamp: {
     fontSize: 12,
     color: '#999',
-    marginTop: 10,
-    textAlign: 'center',
+    marginTop: 5,
   },
   actions: {
     flexDirection: 'row',
@@ -261,23 +388,26 @@ const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: '#4CAF50',
   },
+  disabledButton: {
+    backgroundColor: '#9E9E9E',
+    opacity: 0.6,
+  },
   secondaryButton: {
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#2196F3',
   },
-  actionIcon: {
-    fontSize: 20,
-  },
   primaryButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    marginLeft: 8,
   },
   secondaryButtonText: {
     color: '#2196F3',
     fontSize: 16,
     fontWeight: '600',
+    marginLeft: 8,
   },
   navigation: {
     flexDirection: 'row',
@@ -287,12 +417,15 @@ const styles = StyleSheet.create({
   },
   navButton: {
     flex: 1,
+    flexDirection: 'row',
     padding: 15,
     backgroundColor: '#fff',
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#ddd',
+    gap: 8,
   },
   navButtonText: {
     fontSize: 16,

@@ -12,6 +12,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
 import { detectSignboard } from '../services/api';
+import Icon from '../components/Icon';
 
 export default function CameraScreen() {
   const navigation = useNavigation();
@@ -20,6 +21,7 @@ export default function CameraScreen() {
   const [showCamera, setShowCamera] = useState(true); // NEW STATE
   const [facing, setFacing] = useState('back');
   const [zoom, setZoom] = useState(0);
+  const [flash, setFlash] = useState('off');
   const cameraRef = useRef(null);
 
   useEffect(() => {
@@ -61,6 +63,9 @@ export default function CameraScreen() {
     setIsProcessing(true);
 
     try {
+      setIsProcessing(true);
+
+      // Capture the photo
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
         base64: false,
@@ -88,6 +93,25 @@ export default function CameraScreen() {
 
   const toggleCameraFacing = () => {
     setFacing(current => (current === 'back' ? 'front' : 'back'));
+  };
+
+  const toggleFlash = () => {
+    setFlash(current => {
+      if (current === 'off') return 'on';
+      if (current === 'on') return 'auto';
+      return 'off';
+    });
+  };
+
+  const getFlashIcon = () => {
+    switch (flash) {
+      case 'on':
+        return 'flash';
+      case 'auto':
+        return 'flash-outline';
+      default:
+        return 'flash-off';
+    }
   };
 
   const handlePinchGesture = (event) => {
@@ -132,6 +156,7 @@ export default function CameraScreen() {
             facing={facing}
             ref={cameraRef}
             zoom={zoom}
+            enableTorch={flash === 'on'}
           >
             <View style={styles.overlay}>
               <View style={styles.topControls}>
@@ -139,22 +164,25 @@ export default function CameraScreen() {
                   style={styles.controlButton}
                   onPress={() => navigation.goBack()}
                 >
-                  <Text style={styles.controlIcon}>✕</Text>
+                  <Icon name="close" family="Ionicons" size={28} color="#fff" />
                 </TouchableOpacity>
+                
                 <View style={styles.zoomIndicator}>
                   <Text style={styles.zoomText}>{(zoom * 10).toFixed(1)}x</Text>
                 </View>
+                
                 <TouchableOpacity
                   style={styles.controlButton}
-                  onPress={toggleCameraFacing}
+                  onPress={toggleFlash}
                 >
-                  <Text style={styles.controlIcon}>🔄</Text>
+                  <Icon name={getFlashIcon()} family="Ionicons" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
 
           <View style={styles.instructions}>
+            <Icon name="crop" family="Ionicons" size={20} color="#fff" style={{ marginRight: 8 }} />
             <Text style={styles.instructionText}>
-              Align the signboard within the camera frame
+              Align signboard within the frame
             </Text>
             <Text style={styles.instructionSubtext}>
               Ensure good lighting and hold steady
@@ -162,34 +190,43 @@ export default function CameraScreen() {
           </View>
 
           <View style={styles.bottomControls}>
-            <View style={styles.zoomControls}>
-              <TouchableOpacity
-                style={styles.zoomButton}
-                onPress={handleZoomOut}
-              >
-                <Text style={styles.zoomButtonText}>-</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.zoomButton}
-                onPress={handleZoomIn}
-              >
-                <Text style={styles.zoomButtonText}>+</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.flipButton}
+              onPress={toggleCameraFacing}
+            >
+              <Icon name="camera-reverse" family="Ionicons" size={28} color="#fff" />
+            </TouchableOpacity>
 
             {isProcessing ? (
               <View style={styles.processingContainer}>
                 <ActivityIndicator size="large" color="#fff" />
-                <Text style={styles.processingText}>Processing image...</Text>
+                <Text style={styles.processingText}>Capturing...</Text>
               </View>
             ) : (
               <TouchableOpacity
                 style={styles.captureButton}
                 onPress={handleCapture}
               >
-                <View style={styles.captureButtonInner} />
+                <View style={styles.captureButtonInner}>
+                  <Icon name="camera" family="Ionicons" size={32} color="#2196F3" />
+                </View>
               </TouchableOpacity>
             )}
+
+            <View style={styles.zoomControls}>
+              <TouchableOpacity
+                style={styles.zoomButton}
+                onPress={handleZoomOut}
+              >
+                <Icon name="remove" family="Ionicons" size={24} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.zoomButton}
+                onPress={handleZoomIn}
+              >
+                <Icon name="add" family="Ionicons" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </CameraView>
@@ -224,10 +261,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  controlIcon: {
-    fontSize: 24,
-    color: '#fff',
   },
   zoomIndicator: {
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -282,21 +315,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
+    justifyContent: 'center',
     padding: 20,
   },
   instructionText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 5,
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10,
-  },
-  instructionSubtext: {
-    color: '#E3F2FD',
-    fontSize: 14,
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: -1, height: 1 },
@@ -309,50 +334,61 @@ const styles = StyleSheet.create({
     right: 0,
     paddingBottom: Platform.OS === 'ios' ? 40 : 30,
     alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 20,
   },
-  zoomControls: {
-    flexDirection: 'row',
-    gap: 20,
-    marginBottom: 20,
-  },
-  zoomButton: {
+  flipButton: {
     width: 50,
     height: 50,
     borderRadius: 25,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
   },
-  zoomButtonText: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: 'bold',
+  zoomControls: {
+    flexDirection: 'column',
+    gap: 10,
+  },
+  zoomButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   captureButton: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.9)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
     borderColor: '#fff',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   captureButtonInner: {
     width: 60,
     height: 60,
     borderRadius: 30,
     backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   processingContainer: {
     alignItems: 'center',
   },
   processingText: {
     color: '#fff',
-    fontSize: 16,
-    marginTop: 15,
+    fontSize: 14,
+    marginTop: 10,
     fontWeight: '600',
   },
   permissionText: {
