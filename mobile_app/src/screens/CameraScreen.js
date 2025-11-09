@@ -9,13 +9,15 @@ import {
   Platform,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
+import { detectSignboard } from '../services/api';
 
 export default function CameraScreen() {
   const navigation = useNavigation();
   const [permission, requestPermission] = useCameraPermissions();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showCamera, setShowCamera] = useState(true); // NEW STATE
   const [facing, setFacing] = useState('back');
   const [zoom, setZoom] = useState(0);
   const cameraRef = useRef(null);
@@ -25,6 +27,13 @@ export default function CameraScreen() {
       requestPermission();
     }
   }, [permission]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setShowCamera(true);
+      setIsProcessing(false);
+    }, [])
+  );
 
   if (!permission) {
     return (
@@ -49,28 +58,30 @@ export default function CameraScreen() {
 
   const handleCapture = async () => {
     if (!cameraRef.current || isProcessing) return;
+    setIsProcessing(true);
 
     try {
-      setIsProcessing(true);
-
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
         base64: false,
         exif: false,
       });
 
-      // Simulate OCR processing
-      setTimeout(() => {
-        setIsProcessing(false);
-        navigation.navigate('Result', {
-          imageUri: photo.uri,
-          extractedText: 'Sample extracted text from signboard.\n\nThis is a demo text that would normally come from OCR processing.',
-          timestamp: new Date().toISOString(),
-        });
-      }, 2000);
+      setShowCamera(false); // Hide camera immediately
+
+      // Call backend to detect signboards
+      const detectionResults = await detectSignboard(photo.uri);
+
+      setIsProcessing(false);
+      navigation.navigate('Result', {
+        boxedImageUri: detectionResults.boxed_image_url,
+        detections: detectionResults.detections,
+        timestamp: new Date().toISOString(),
+      });
     } catch (error) {
       setIsProcessing(false);
-      Alert.alert('Error', 'Failed to capture image. Please try again.');
+      setShowCamera(true); // Show camera again if error
+      Alert.alert('Error', 'Failed to capture or process image. Please try again.');
       console.error('Capture error:', error);
     }
   };
@@ -102,6 +113,16 @@ export default function CameraScreen() {
     setZoom(current => Math.max(current - 0.1, 0));
   };
 
+  if (!showCamera) {
+    // Show loading while processing
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#2196F3" />
+        <Text style={styles.processingText}>Processing image...</Text>
+      </View>
+    );
+  }
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <PinchGestureHandler onGestureEvent={handlePinchGesture}>
@@ -131,16 +152,9 @@ export default function CameraScreen() {
                 </TouchableOpacity>
               </View>
 
-          <View style={styles.frameGuide}>
-            <View style={[styles.corner, styles.topLeft]} />
-            <View style={[styles.corner, styles.topRight]} />
-            <View style={[styles.corner, styles.bottomLeft]} />
-            <View style={[styles.corner, styles.bottomRight]} />
-          </View>
-
           <View style={styles.instructions}>
             <Text style={styles.instructionText}>
-              Align signboard within the frame
+              Align the signboard within the camera frame
             </Text>
             <Text style={styles.instructionSubtext}>
               Ensure good lighting and hold steady
@@ -227,15 +241,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  frameGuide: {
-    flex: 1,
-    marginHorizontal: 30,
-    marginVertical: 100,
-    borderWidth: 2,
-    borderColor: 'rgba(33, 150, 243, 0.8)',
-    borderRadius: 20,
-    position: 'relative',
-  },
   corner: {
     position: 'absolute',
     width: 30,
@@ -272,6 +277,10 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 20,
   },
   instructions: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     alignItems: 'center',
     padding: 20,
   },
@@ -294,6 +303,10 @@ const styles = StyleSheet.create({
     textShadowRadius: 10,
   },
   bottomControls: {
+    position: 'absolute',
+    bottom: 50,
+    left: 0,
+    right: 0,
     paddingBottom: Platform.OS === 'ios' ? 40 : 30,
     alignItems: 'center',
   },

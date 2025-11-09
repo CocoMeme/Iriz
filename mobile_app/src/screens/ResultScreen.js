@@ -15,19 +15,21 @@ import * as Speech from 'expo-speech';
 export default function ResultScreen() {
   const route = useRoute();
   const navigation = useNavigation();
-  const { imageUri, extractedText, timestamp } = route.params || {};
-  
+  const {
+    boxedImageUri,
+    detections,
+    timestamp,
+    apiBaseUrl
+  } = route.params || {};
+
   const [isSpeaking, setIsSpeaking] = useState(false);
 
+  // Concatenate all extracted texts
+  const allExtractedText = detections?.map(d => d.extracted_text).join('\n\n') || '';
+
   useEffect(() => {
-    // Auto-play text on screen load
-    if (extractedText) {
-      speakText();
-    }
-    
-    return () => {
-      Speech.stop();
-    };
+    if (allExtractedText) speakText();
+    return () => Speech.stop();
   }, []);
 
   const speakText = async () => {
@@ -36,9 +38,8 @@ export default function ResultScreen() {
       setIsSpeaking(false);
       return;
     }
-
     setIsSpeaking(true);
-    Speech.speak(extractedText || 'No text detected', {
+    Speech.speak(allExtractedText || 'No text detected', {
       onDone: () => setIsSpeaking(false),
       onStopped: () => setIsSpeaking(false),
       onError: () => {
@@ -56,7 +57,7 @@ export default function ResultScreen() {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: extractedText || 'No text detected',
+        message: allExtractedText || 'No text detected',
       });
     } catch (error) {
       Alert.alert('Error', 'Failed to share text');
@@ -65,7 +66,7 @@ export default function ResultScreen() {
 
   const handleRetake = () => {
     Speech.stop();
-    navigation.goBack();
+    navigation.navigate('Camera');
   };
 
   const handleHome = () => {
@@ -76,8 +77,8 @@ export default function ResultScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.imageContainer}>
-        {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.image} />
+        {boxedImageUri ? (
+          <Image source={{ uri: boxedImageUri }} style={styles.image} />
         ) : (
           <View style={styles.imagePlaceholder}>
             <Text style={styles.placeholderText}>No Image</Text>
@@ -85,20 +86,49 @@ export default function ResultScreen() {
         )}
       </View>
 
+      <Text style={styles.headerTitle}>Detected Signboards</Text>
+      <ScrollView horizontal style={{ marginVertical: 10 }}>
+        {detections?.map((det, idx) => {
+          const [imgWidth, setImgWidth] = React.useState(0);
+          const [imgHeight, setImgHeight] = React.useState(0);
+
+          // Get original image size
+          React.useEffect(() => {
+            Image.getSize(det.cropped_url, (width, height) => {
+              const maxHeight = 100; // max height for scrollview preview
+              const scaleFactor = maxHeight / height;
+              setImgWidth(width * scaleFactor);
+              setImgHeight(maxHeight);
+            });
+          }, [det.cropped_url]);
+
+          return (
+            <View key={idx} style={{ marginRight: 10, alignItems: 'center' }}>
+              <Image
+                source={{ uri: det.cropped_url }}
+                style={{ width: imgWidth, height: imgHeight, borderRadius: 8, borderWidth: 1, borderColor: '#2196F3' }}
+                resizeMode="contain"
+              />
+              <Text style={{ fontSize: 12, marginTop: 4, color: '#333' }}>
+                {det.extracted_text || 'No text'}
+              </Text>
+            </View>
+          );
+        })}
+      </ScrollView>
+
       <View style={styles.textContainer}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Extracted Text</Text>
+          <Text style={styles.headerTitle}>All Extracted Text</Text>
           <TouchableOpacity onPress={speakText} style={styles.speakerButton}>
             <Text style={styles.speakerIcon}>{isSpeaking ? '🔊' : '🔈'}</Text>
           </TouchableOpacity>
         </View>
-
         <View style={styles.textBox}>
           <Text style={styles.extractedText}>
-            {extractedText || 'No text detected in the image'}
+            {allExtractedText || 'No text detected in the image'}
           </Text>
         </View>
-
         {timestamp && (
           <Text style={styles.timestamp}>
             Captured: {new Date(timestamp).toLocaleString()}
