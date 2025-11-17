@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImageManipulator from 'expo-image-manipulator';
-import Icon from '../components/Icon';
-import { extractTextFromImage } from '../services/ocrService';
+import Icon from '../../components/Icon';
+import { detectSignboard } from '../../services/api';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CROP_CONTAINER_HEIGHT = SCREEN_HEIGHT - 200;
@@ -219,36 +219,37 @@ export default function ImageCropScreen() {
   const processImage = async (uri) => {
     try {
       setIsProcessing(true);
-      console.log('Processing image...');
+      console.log('Processing image with signboard detection...');
       
-      const ocrResult = await extractTextFromImage(uri);
+      // Call backend API to detect signboards
+      const detectionResults = await detectSignboard(uri);
       
-      console.log('OCR Result:', {
-        textLength: ocrResult.text.length,
-        confidence: ocrResult.confidence,
+      console.log('Detection Results:', {
+        detectionsCount: detectionResults.detections?.length || 0,
+        hasBoxedImage: !!detectionResults.boxed_image_url,
       });
 
       setIsProcessing(false);
 
-      if (!ocrResult.text || ocrResult.text.trim().length === 0) {
+      if (!detectionResults.detections || detectionResults.detections.length === 0) {
         Alert.alert(
-          'No Text Found',
-          'Could not detect any text in the image. Try adjusting the crop or retaking the photo.',
+          'No Signboards Detected',
+          'Could not detect any signboards in the image. Try adjusting the angle or retaking the photo.',
           [
             { text: 'Retake', onPress: () => navigation.goBack() },
-            { text: 'Continue Anyway', onPress: () => navigateToResult(uri, ocrResult) },
+            { text: 'OK' },
           ]
         );
         return;
       }
 
-      navigateToResult(uri, ocrResult);
+      navigateToResult(detectionResults);
     } catch (error) {
       setIsProcessing(false);
-      console.error('OCR processing error:', error);
+      console.error('Detection processing error:', error);
       Alert.alert(
-        'OCR Error',
-        error.message || 'Failed to extract text. Please try again.',
+        'Detection Error',
+        error.message || 'Failed to detect signboards. Please try again.',
         [
           { text: 'Retake', onPress: () => navigation.goBack() },
           { text: 'Try Again', onPress: () => processImage(uri) },
@@ -257,14 +258,11 @@ export default function ImageCropScreen() {
     }
   };
 
-  const navigateToResult = (uri, ocrResult) => {
+  const navigateToResult = (detectionResults) => {
     navigation.navigate('Result', {
-      imageUri: uri,
-      extractedText: ocrResult.text,
-      confidence: ocrResult.confidence,
+      boxedImageUri: detectionResults.boxed_image_url,
+      detections: detectionResults.detections,
       timestamp: new Date().toISOString(),
-      language: ocrResult.language || 'eng',
-      orientation: ocrResult.orientation || 0,
     });
   };
 

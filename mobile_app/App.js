@@ -4,15 +4,13 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import { Animated, Alert } from 'react-native';
 
-import HomeScreen from './src/screens/HomeScreen';
-import CameraScreen from './src/screens/CameraScreen';
-import ImageCropScreen from './src/screens/ImageCropScreen';
-import ResultScreen from './src/screens/ResultScreen';
-import HistoryScreen from './src/screens/HistoryScreen';
-import SettingsScreen from './src/screens/SettingsScreen';
-import LoginScreen from './src/screens/LoginScreen';
-import SplashScreen from './src/screens/SplashScreen';
-import CustomHeader from './src/components/CustomHeader';
+import CameraScreen from './src/screens/CameraScreens/CameraScreen';
+import ImageCropScreen from './src/screens/CameraScreens/ImageCropScreen';
+import ResultScreen from './src/screens/CameraScreens/ResultScreen';
+import SettingsScreen from './src/screens/AccountScreens/SettingsScreen';
+import LandingScreen from './src/screens/OtherScreens/LandingScreen';
+import SplashScreen from './src/screens/OtherScreens/SplashScreen';
+import AppNavigator from './src/navigation/AppNavigator';
 
 // Import storage services
 import { initDatabase } from './src/services/storageService';
@@ -75,51 +73,61 @@ export default function App() {
       <Stack.Navigator
         initialRouteName="Login"
         screenOptions={{
-          headerStyle: {
-            backgroundColor: '#0247ae',
-          },
-          headerTintColor: '#ffffff',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
+          headerShown: false,
         }}
       >
         <Stack.Screen 
           name="Login" 
-          component={LoginScreen}
-          options={{ headerShown: false }}
+          component={LandingScreen}
         />
         <Stack.Screen 
-          name="Home" 
-          component={HomeScreen}
-          options={{ 
-            header: () => <CustomHeader />
-          }}
+          name="Main" 
+          component={AppNavigator}
         />
         <Stack.Screen 
           name="Camera" 
           component={CameraScreen}
-          options={{ title: 'Capture Signboard' }}
+          options={{ 
+            headerShown: true,
+            title: 'Capture Signboard',
+            headerStyle: { backgroundColor: '#0247ae' },
+            headerTintColor: '#ffffff',
+            headerTitleStyle: { fontWeight: 'bold' },
+          }}
         />
         <Stack.Screen 
           name="ImageCrop" 
           component={ImageCropScreen}
-          options={{ title: 'Crop & Process' }}
+          options={{ 
+            headerShown: true,
+            title: 'Crop & Process',
+            headerStyle: { backgroundColor: '#0247ae' },
+            headerTintColor: '#ffffff',
+            headerTitleStyle: { fontWeight: 'bold' },
+          }}
         />
         <Stack.Screen 
           name="Result" 
           component={ResultScreen}
-          options={{ title: 'Extracted Text' }}
-        />
-        <Stack.Screen 
-          name="History" 
-          component={HistoryScreen}
-          options={{ title: 'History' }}
+          options={{ 
+            headerShown: true,
+            title: 'Result',
+            headerStyle: { backgroundColor: '#FFFFFF' },
+            headerTintColor: '#1F2937',
+            headerTitleStyle: { fontWeight: 'bold' },
+            headerShadowVisible: true,
+          }}
         />
         <Stack.Screen 
           name="Settings" 
           component={SettingsScreen}
-          options={{ title: 'Settings' }}
+          options={{ 
+            headerShown: true,
+            title: 'Settings',
+            headerStyle: { backgroundColor: '#0247ae' },
+            headerTintColor: '#ffffff',
+            headerTitleStyle: { fontWeight: 'bold' },
+          }}
         />
       </Stack.Navigator>
     </NavigationContainer>

@@ -8,14 +8,15 @@ import {
   Switch,
   Alert,
   Platform,
+  StatusBar,
   Share as RNShare,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Speech from 'expo-speech';
-import { getDatabaseStats, exportCapturesToJSON } from '../services/storageService';
-import { getCacheStats, clearAllImages } from '../services/imageCacheService';
-import Icon from '../components/Icon';
+import { getDatabaseStats, exportCapturesToJSON } from '../../services/storageService';
+import { getCacheStats, clearAllImages } from '../../services/imageCacheService';
+import Icon from '../../components/Icon';
 
 const SETTINGS_KEY = '@iriz_settings';
 
@@ -218,6 +219,7 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Settings</Text>
         <Text style={styles.headerSubtitle}>Customize your experience</Text>

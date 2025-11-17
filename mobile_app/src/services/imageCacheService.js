@@ -41,12 +41,13 @@ export const initImageCache = async () => {
 
 /**
  * Save image to permanent storage
- * @param {string} tempUri - Temporary image URI
+ * @param {string} tempUri - Temporary image URI or remote URL
  * @returns {Promise<Object>} - Saved image info {imageUri, thumbnailUri, size}
  */
 export const saveImage = async (tempUri) => {
   try {
     console.log('Saving image to permanent storage...');
+    console.log('Source URI:', tempUri);
     
     // Generate unique filename
     const timestamp = Date.now();
@@ -56,20 +57,37 @@ export const saveImage = async (tempUri) => {
     const permanentUri = `${CAPTURES_DIR}${filename}`;
     const thumbnailUri = `${THUMBNAILS_DIR}${thumbnailFilename}`;
     
-    // Copy original image to permanent location
-    await FileSystem.copyAsync({
-      from: tempUri,
-      to: permanentUri,
-    });
+    // Check if URI is a remote URL (starts with http:// or https://)
+    const isRemoteUrl = tempUri.startsWith('http://') || tempUri.startsWith('https://');
     
-    console.log('Image saved to:', permanentUri);
-    
-    // Generate thumbnail
-    const thumbnail = await createThumbnail(tempUri);
-    await FileSystem.moveAsync({
-      from: thumbnail.uri,
-      to: thumbnailUri,
-    });
+    if (isRemoteUrl) {
+      console.log('Downloading remote image...');
+      // Download the remote image
+      const downloadResult = await FileSystem.downloadAsync(tempUri, permanentUri);
+      console.log('Image downloaded to:', downloadResult.uri);
+      
+      // Generate thumbnail from downloaded image
+      const thumbnail = await createThumbnail(downloadResult.uri);
+      await FileSystem.moveAsync({
+        from: thumbnail.uri,
+        to: thumbnailUri,
+      });
+    } else {
+      // Copy local file to permanent location
+      await FileSystem.copyAsync({
+        from: tempUri,
+        to: permanentUri,
+      });
+      
+      console.log('Image saved to:', permanentUri);
+      
+      // Generate thumbnail
+      const thumbnail = await createThumbnail(tempUri);
+      await FileSystem.moveAsync({
+        from: thumbnail.uri,
+        to: thumbnailUri,
+      });
+    }
     
     console.log('Thumbnail saved to:', thumbnailUri);
     

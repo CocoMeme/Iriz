@@ -6,7 +6,9 @@ export async function detectSignboard(imageUri) {
     type: 'image/jpeg',
   });
 
-  const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/detect-signboard`, {
+  console.log('Sending request to:', `${process.env.EXPO_PUBLIC_API_URL}/api/detect-signboard`);
+  
+  const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/detect-signboard`, {
     method: 'POST',
     body: formData,
     headers: {
@@ -14,5 +16,13 @@ export async function detectSignboard(imageUri) {
     },
   });
 
-  return response.json();
+  console.log('Response status:', response.status);
+  const text = await response.text();
+  console.log('Response text:', text.substring(0, 200));
+  
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}, body: ${text.substring(0, 100)}`);
+  }
+  
+  return JSON.parse(text);
 }

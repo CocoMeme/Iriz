@@ -9,10 +9,12 @@ import {
   Alert,
   RefreshControl,
   TextInput,
+  StatusBar,
+  Platform,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { getAllCaptures, deleteCapture, clearAllCaptures, searchCaptures } from '../services/storageService';
-import Icon from '../components/Icon';
+import { getAllCaptures, deleteCapture, clearAllCaptures, searchCaptures } from '../../services/storageService';
+import Icon from '../../components/Icon';
 
 export default function HistoryScreen() {
   const navigation = useNavigation();
@@ -67,10 +69,26 @@ export default function HistoryScreen() {
   };
 
   const handleItemPress = (item) => {
+    // Parse detections JSON if it exists
+    let detections = null;
+    if (item.detections) {
+      try {
+        detections = JSON.parse(item.detections);
+      } catch (e) {
+        console.warn('Failed to parse detections JSON:', e);
+      }
+    }
+    
+    // Navigate to Result screen with full context
     navigation.navigate('Result', {
+      boxedImageUri: item.boxedImageUrl || item.imageUri, // Use Cloudinary URL or fallback to local
+      detections: detections, // Restored detections array with cropped URLs
+      timestamp: item.timestamp,
       imageUri: item.imageUri,
       extractedText: item.text,
-      timestamp: item.timestamp,
+      confidence: item.confidence,
+      language: item.language,
+      orientation: item.orientation,
     });
   };
 
@@ -189,33 +207,55 @@ export default function HistoryScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      
+      {/* Header matching HomeScreen style */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.headerText}>
-            {filteredHistory.length} {filteredHistory.length === 1 ? 'item' : 'items'}
-          </Text>
+        <View style={styles.headerContent}>
+          <View style={styles.leftSection}>
+            <View style={styles.iconContainer}>
+              <Icon name="time" family="Ionicons" size={24} color="#1D4ED8" />
+            </View>
+            <View>
+              <Text style={styles.greeting}>Your scans</Text>
+              <Text style={styles.title}>History</Text>
+            </View>
+          </View>
+          
           {history.length > 0 && (
-            <TouchableOpacity onPress={handleClearAll}>
-              <Text style={styles.clearButton}>Clear All</Text>
+            <TouchableOpacity 
+              style={styles.clearButton}
+              onPress={handleClearAll}
+            >
+              <Icon name="trash-outline" family="Ionicons" size={20} color="#EF4444" />
             </TouchableOpacity>
           )}
         </View>
+        
+        {/* Search Bar */}
         {history.length > 0 && (
           <View style={styles.searchContainer}>
-            <Icon name="search" family="Ionicons" size={18} color="#666" style={styles.searchIcon} />
+            <Icon name="search" family="Ionicons" size={18} color="#6B7280" />
             <TextInput
               style={styles.searchInput}
               placeholder="Search history..."
               value={searchQuery}
               onChangeText={handleSearch}
-              placeholderTextColor="#999"
+              placeholderTextColor="#9CA3AF"
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => handleSearch('')}>
-                <Icon name="close-circle" family="Ionicons" size={20} color="#999" />
+                <Icon name="close-circle" family="Ionicons" size={20} color="#9CA3AF" />
               </TouchableOpacity>
             )}
           </View>
+        )}
+        
+        {/* Items count */}
+        {history.length > 0 && (
+          <Text style={styles.itemCount}>
+            {filteredHistory.length} {filteredHistory.length === 1 ? 'item' : 'items'}
+          </Text>
         )}
       </View>
 
@@ -240,62 +280,95 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F9FAFB',
   },
   header: {
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#F9FAFB',
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
   },
-  headerTop: {
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 15,
+    marginBottom: 20,
+  },
+  leftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  greeting: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  clearButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    marginHorizontal: 15,
-    marginBottom: 15,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginBottom: 12,
     gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#333',
+    fontSize: 15,
+    color: '#111827',
   },
-  clearSearchIcon: {
-    fontSize: 18,
-    color: '#999',
-    padding: 5,
-  },
-  headerText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  clearButton: {
-    fontSize: 14,
-    color: '#f44336',
+  itemCount: {
+    fontSize: 13,
+    color: '#6B7280',
     fontWeight: '600',
+    paddingHorizontal: 8,
   },
   historyItem: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    padding: 15,
-    marginHorizontal: 15,
-    marginTop: 10,
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 16,
     alignItems: 'center',
-    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   itemContent: {
     flex: 1,
@@ -305,82 +378,95 @@ const styles = StyleSheet.create({
   thumbnail: {
     width: 60,
     height: 60,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
+    marginRight: 12,
   },
   thumbnailImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 8,
+    borderRadius: 12,
   },
   itemText: {
     flex: 1,
   },
   itemTitle: {
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 5,
-    fontWeight: '500',
+    fontSize: 15,
+    color: '#111827',
+    marginBottom: 6,
+    fontWeight: '600',
   },
   itemMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   itemDate: {
     fontSize: 12,
-    color: '#999',
+    color: '#6B7280',
+    fontWeight: '500',
   },
   confidenceBadge: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: '#DBEAFE',
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   confidenceText: {
     fontSize: 11,
-    color: '#2196F3',
-    fontWeight: '600',
+    color: '#1D4ED8',
+    fontWeight: '700',
   },
   deleteButton: {
-    padding: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    paddingHorizontal: 40,
   },
   emptyList: {
     flex: 1,
   },
   emptyText: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
+    fontWeight: '700',
+    color: '#111827',
+    marginTop: 16,
+    marginBottom: 8,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 15,
+    color: '#6B7280',
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: 32,
   },
   captureButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2196F3',
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 8,
-    gap: 10,
+    backgroundColor: '#1D4ED8',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 16,
+    gap: 8,
+    shadowColor: '#1D4ED8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   captureButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

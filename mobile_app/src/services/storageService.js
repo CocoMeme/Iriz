@@ -32,14 +32,35 @@ export const initDatabase = async () => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         imageUri TEXT,
         thumbnailUri TEXT,
+        boxedImageUrl TEXT,
         text TEXT NOT NULL,
         confidence REAL,
         timestamp TEXT NOT NULL,
         language TEXT DEFAULT 'eng',
         orientation INTEGER DEFAULT 0,
+        detections TEXT,
         createdAt TEXT DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    
+    // Migration: Add new columns if they don't exist (for existing databases)
+    try {
+      await database.execAsync(`
+        ALTER TABLE captures ADD COLUMN boxedImageUrl TEXT;
+      `);
+      console.log('Added boxedImageUrl column');
+    } catch (e) {
+      // Column already exists, ignore error
+    }
+    
+    try {
+      await database.execAsync(`
+        ALTER TABLE captures ADD COLUMN detections TEXT;
+      `);
+      console.log('Added detections column');
+    } catch (e) {
+      // Column already exists, ignore error
+    }
     
     // Create indexes for better query performance
     await database.execAsync(`
@@ -66,12 +87,15 @@ export const initDatabase = async () => {
 /**
  * Save a capture to history
  * @param {Object} capture - Capture data
- * @param {string} capture.imageUri - Image URI
+ * @param {string} capture.imageUri - Image URI (local saved file)
+ * @param {string} capture.thumbnailUri - Thumbnail URI
+ * @param {string} capture.boxedImageUrl - Cloudinary URL for boxed image
  * @param {string} capture.text - Extracted text
  * @param {number} capture.confidence - OCR confidence score
  * @param {string} capture.timestamp - ISO timestamp
  * @param {string} capture.language - Language code
  * @param {number} capture.orientation - Image orientation
+ * @param {Array} capture.detections - Array of detection objects with cropped URLs
  * @returns {Promise<number>} - Inserted capture ID
  */
 export const saveCapture = async (capture) => {
@@ -79,18 +103,41 @@ export const saveCapture = async (capture) => {
     console.log('Saving capture to database...');
     const database = await getDatabase();
     
-    const { imageUri, text, confidence, timestamp, language, orientation } = capture;
+    const { 
+      imageUri, 
+      thumbnailUri,
+      boxedImageUrl,
+      text, 
+      confidence, 
+      timestamp, 
+      language, 
+      orientation,
+      detections 
+    } = capture;
     
     // Validate required fields
     if (!text || !timestamp) {
       throw new Error('Text and timestamp are required');
     }
     
+    // Serialize detections array to JSON string
+    const detectionsJson = detections ? JSON.stringify(detections) : null;
+    
     // Insert into database
     const result = await database.runAsync(
-      `INSERT INTO captures (imageUri, text, confidence, timestamp, language, orientation) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [imageUri || null, text, confidence || 0, timestamp, language || 'eng', orientation || 0]
+      `INSERT INTO captures (imageUri, thumbnailUri, boxedImageUrl, text, confidence, timestamp, language, orientation, detections) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        imageUri || null, 
+        thumbnailUri || null,
+        boxedImageUrl || null,
+        text, 
+        confidence || 0, 
+        timestamp, 
+        language || 'eng', 
+        orientation || 0,
+        detectionsJson
+      ]
     );
     
     console.log('Capture saved successfully with ID:', result.lastInsertRowId);

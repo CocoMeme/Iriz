@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Image, Text, StyleSheet, Dimensions, Animated } from 'react-native';
+import { View, Image, Text, StyleSheet, Dimensions, Animated, StatusBar } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -17,9 +17,10 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         <Image
-          source={require('../../assets/logo/iriz-high-resolution-logo-transparent-blue.png')}
+          source={require('../../../assets/logo/iriz-high-resolution-logo-transparent-blue.png')}
           style={styles.logo}
           resizeMode="contain"
         />
