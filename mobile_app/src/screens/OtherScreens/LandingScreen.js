@@ -11,6 +11,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from '../../components/Icon';
 
 const { width } = Dimensions.get('window');
@@ -21,34 +22,48 @@ const tutorialSteps = [
     title: 'Welcome to Iriz',
     description: 'Your personal signboard reader. Let\'s get you started.',
     image: require('../../../assets/logo/iriz-high-resolution-logo-transparent-blue.png'),
+    isScreenshot: false,
   },
   {
     id: '2',
     title: 'Step 1: Capture',
     description: 'Point your camera at any signboard and tap the capture button.',
-    image: require('../../../assets/logo/iriz-high-resolution-logo-transparent-blue.png'),
+    image: require('../../../assets/pictures/step1.jpg'),
+    isScreenshot: true,
   },
   {
     id: '3',
     title: 'Step 2: Listen',
     description: 'Iriz automatically detects text and reads it aloud for you.',
-    image: require('../../../assets/logo/iriz-high-resolution-logo-transparent-blue.png'),
+    image: require('../../../assets/pictures/step2.jpg'),
+    isScreenshot: true,
   },
   {
     id: '4',
     title: 'Ready to Go!',
     description: 'You are all set. Tap below to start exploring the world with sound.',
-    image: require('../../../assets/logo/iriz-high-resolution-logo-transparent-blue.png'),
+    image: require('../../../assets/pictures/step3.jpg'),
+    isScreenshot: true,
   },
 ];
 
 const TutorialSlide = ({ item }) => (
   <View style={styles.slideContainer}>
-    <View style={styles.imageContainer}>
-      <Image source={item.image} style={styles.slideImage} resizeMode="contain" />
+    <View style={[styles.imageContainer, item.isScreenshot && styles.screenshotContainer]}>
+      {item.isScreenshot ? (
+        <View style={styles.phoneFrame}>
+          <View style={styles.phoneScreen}>
+            <Image source={item.image} style={styles.screenshotImage} resizeMode="cover" />
+          </View>
+          <View style={styles.phoneNotch} />
+        </View>
+      ) : (
+        <Image source={item.image} style={styles.slideImage} resizeMode="contain" />
+      )}
     </View>
     <View style={styles.textContainer}>
       <Text style={styles.stepTitle}>{item.title}</Text>
+      <View style={styles.titleUnderline} />
       <Text style={styles.stepDescription}>{item.description}</Text>
     </View>
   </View>
@@ -71,7 +86,12 @@ export default function LandingScreen() {
     }
   };
 
-  const handleStart = () => {
+  const handleStart = async () => {
+    try {
+      await AsyncStorage.setItem('@iriz_show_landing', 'false');
+    } catch (error) {
+      console.error('Error saving setting:', error);
+    }
     navigation.replace('Main');
   };
 
@@ -136,6 +156,10 @@ export default function LandingScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {currentIndex === tutorialSteps.length - 1 && (
+          <View style={{ height: 20 }} />
+        )}
       </View>
     </View>
   );
@@ -159,40 +183,91 @@ const styles = StyleSheet.create({
   slideContainer: {
     width: width,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     paddingHorizontal: 24,
+    paddingTop: 20,
   },
   imageContainer: {
-    flex: 0.5,
+    flex: 0.6,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#F0F4FF',
     width: width * 0.8,
     borderRadius: 30,
-    marginBottom: 40,
+    marginBottom: 0,
     padding: 20,
+    marginTop: 10,
+  },
+  screenshotContainer: {
+    backgroundColor: 'transparent',
+    padding: 0,
+    justifyContent: 'center',
+  },
+  phoneFrame: {
+    width: width * 0.5,
+    aspectRatio: 9/19,
+    backgroundColor: '#1F2937',
+    borderRadius: 24,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+    position: 'relative',
+  },
+  phoneScreen: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  screenshotImage: {
+    width: '100%',
+    height: '100%',
+  },
+  phoneNotch: {
+    position: 'absolute',
+    top: 12,
+    alignSelf: 'center',
+    width: '40%',
+    height: 14,
+    backgroundColor: '#1F2937',
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    zIndex: 10,
   },
   slideImage: {
     width: '80%',
     height: '80%',
   },
   textContainer: {
-    flex: 0.3,
+    flex: 0.4,
     alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 40,
+    paddingHorizontal: 20,
   },
   stepTitle: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '800',
-    color: '#0000FF',
+    color: '#1F2937',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
     letterSpacing: -0.5,
   },
+  titleUnderline: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#0000FF',
+    borderRadius: 2,
+    marginBottom: 20,
+  },
   stepDescription: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#6B7280',
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 28,
     fontWeight: '500',
   },
   footer: {
@@ -277,5 +352,33 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '700',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#F0F4FF',
+    borderRadius: 10,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#0000FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    backgroundColor: '#FFFFFF',
+  },
+  checkboxChecked: {
+    backgroundColor: '#0000FF',
+    borderColor: '#0000FF',
+  },
+  checkboxLabel: {
+    fontSize: 15,
+    color: '#1F2937',
+    fontWeight: '500',
   },
 });

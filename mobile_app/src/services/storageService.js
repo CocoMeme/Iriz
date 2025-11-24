@@ -370,3 +370,237 @@ export const exportCapturesToJSON = async () => {
     throw error;
   }
 };
+
+/**
+ * Get daily capture counts for the last n days
+ * @param {number} days - Number of days to look back
+ * @returns {Promise<Array>} - Array of { date, count }
+ */
+export const getDailyCaptureCounts = async (days = 7) => {
+  try {
+    const database = await getDatabase();
+    // SQLite strftime to group by day
+    const query = `
+      SELECT strftime('%Y-%m-%d', timestamp) as date, COUNT(*) as count 
+      FROM captures 
+      WHERE timestamp >= date('now', '-${days} days')
+      GROUP BY date
+      ORDER BY date ASC
+    `;
+    const results = await database.getAllAsync(query);
+    return results;
+  } catch (error) {
+    console.error('Get daily stats error:', error);
+    // Fallback for testing if date function fails or returns empty
+    return [];
+  }
+};
+
+/**
+ * Get language distribution
+ * @returns {Promise<Array>} - Array of { language, count }
+ */
+export const getLanguageDistribution = async () => {
+  try {
+    const database = await getDatabase();
+    const query = `
+      SELECT language, COUNT(*) as count 
+      FROM captures 
+      GROUP BY language
+      ORDER BY count DESC
+    `;
+    const results = await database.getAllAsync(query);
+    return results;
+  } catch (error) {
+    console.error('Get language stats error:', error);
+    return [];
+  }
+};
+
+/**
+ * Get scans by time of day
+ * @returns {Promise<Array>} - Array of { period, count }
+ */
+export const getScansByTimeOfDay = async () => {
+  try {
+    const database = await getDatabase();
+    // Extract hour from timestamp (ISO format YYYY-MM-DDTHH:MM:SS.sssZ)
+    // We'll use SQLite's strftime('%H', timestamp)
+    const query = `
+      SELECT strftime('%H', timestamp) as hour, COUNT(*) as count 
+      FROM captures 
+      GROUP BY hour
+    `;
+    const results = await database.getAllAsync(query);
+    
+    // Process results into periods
+    const periods = {
+      'Morning': 0,   // 6-11
+      'Afternoon': 0, // 12-17
+      'Evening': 0,   // 18-23
+      'Night': 0      // 0-5
+    };
+    
+    results.forEach(row => {
+      const hour = parseInt(row.hour, 10);
+      if (hour >= 6 && hour < 12) periods['Morning'] += row.count;
+      else if (hour >= 12 && hour < 18) periods['Afternoon'] += row.count;
+      else if (hour >= 18 && hour <= 23) periods['Evening'] += row.count;
+      else periods['Night'] += row.count;
+    });
+    
+    return Object.keys(periods).map(key => ({
+      period: key,
+      count: periods[key]
+    }));
+  } catch (error) {
+    console.error('Get time of day stats error:', error);
+    return [];
+  }
+};
+
+/**
+ * Get confidence distribution
+ * @returns {Promise<Array>} - Array of { range, count }
+ */
+export const getConfidenceDistribution = async () => {
+  try {
+    const database = await getDatabase();
+    // Group by ranges: 0-50, 50-75, 75-90, 90-100
+    const query = `
+      SELECT 
+        CASE 
+          WHEN confidence >= 90 THEN 'Excellent (90-100%)'
+          WHEN confidence >= 75 THEN 'Good (75-89%)'
+          WHEN confidence >= 50 THEN 'Fair (50-74%)'
+          ELSE 'Poor (<50%)'
+        END as range,
+        COUNT(*) as count
+      FROM captures
+      GROUP BY range
+      ORDER BY min(confidence) DESC
+    `;
+    const results = await database.getAllAsync(query);
+    return results;
+  } catch (error) {
+    console.error('Get confidence stats error:', error);
+    return [];
+  }
+};
+
+/**
+ * Seed database with dummy data
+ * @returns {Promise<void>}
+ */
+export const seedDatabase = async () => {
+  try {
+    console.log('Seeding database with dummy data...');
+    const database = await getDatabase();
+    
+    const languages = ['eng', 'spa', 'fra', 'deu', 'jpn'];
+    const texts = [
+      'WARNING: HIGH VOLTAGE',
+      'No Parking Anytime',
+      'Restaurant Open 24/7',
+      'Speed Limit 50',
+      'Construction Ahead',
+      'Welcome to City Center',
+      'Exit 24B',
+      'Bus Stop',
+      'Coffee Shop',
+      'Library Entrance'
+    ];
+
+    // Generate 20 records
+    for (let i = 0; i < 20; i++) {
+      const daysAgo = Math.floor(Math.random() * 30); // Random date in last 30 days
+      const date = new Date();
+      date.setDate(date.getDate() - daysAgo);
+      // Random time
+      date.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60));
+      
+      const confidence = 40 + Math.random() * 60; // Random confidence 40-100
+      const text = texts[Math.floor(Math.random() * texts.length)];
+      const language = languages[Math.floor(Math.random() * languages.length)];
+      
+      await database.runAsync(
+        `INSERT INTO captures (text, confidence, timestamp, language, orientation, detections) 
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          text,
+          confidence,
+          date.toISOString(),
+          language,
+          0,
+          JSON.stringify([]) // Empty detections for dummy data
+        ]
+      );
+    }
+    console.log('Database seeded successfully');
+    return true;
+  } catch (error) {
+    console.error('Seed database error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get captures by confidence range
+ * @param {number} min - Minimum confidence
+ * @param {number} max - Maximum confidence
+ * @returns {Promise<Array>} - Captures in range
+ */
+export const getCapturesByConfidenceRange = async (min, max) => {
+  try {
+    const database = await getDatabase();
+    const captures = await database.getAllAsync(
+      'SELECT * FROM captures WHERE confidence >= ? AND confidence < ? ORDER BY timestamp DESC',
+      [min, max]
+    );
+    return captures;
+  } catch (error) {
+    console.error('Get captures by confidence range error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get captures by time of day period
+ * @param {string} period - 'Morning', 'Afternoon', 'Evening', 'Night'
+ * @returns {Promise<Array>} - Captures in period
+ */
+export const getCapturesByTimeOfDay = async (period) => {
+  try {
+    const database = await getDatabase();
+    let hourCondition = '';
+    
+    switch(period) {
+      case 'Morning': // 6-11
+        hourCondition = "CAST(strftime('%H', timestamp) AS INTEGER) >= 6 AND CAST(strftime('%H', timestamp) AS INTEGER) < 12";
+        break;
+      case 'Afternoon': // 12-17
+        hourCondition = "CAST(strftime('%H', timestamp) AS INTEGER) >= 12 AND CAST(strftime('%H', timestamp) AS INTEGER) < 18";
+        break;
+      case 'Evening': // 18-23
+        hourCondition = "CAST(strftime('%H', timestamp) AS INTEGER) >= 18 AND CAST(strftime('%H', timestamp) AS INTEGER) <= 23";
+        break;
+      case 'Night': // 0-5
+        hourCondition = "CAST(strftime('%H', timestamp) AS INTEGER) >= 0 AND CAST(strftime('%H', timestamp) AS INTEGER) < 6";
+        break;
+      default:
+        return [];
+    }
+    
+    const query = `SELECT * FROM captures WHERE ${hourCondition} ORDER BY timestamp DESC`;
+    const captures = await database.getAllAsync(query);
+    return captures;
+  } catch (error) {
+    console.error('Get captures by time of day error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Alias for getScansByTimeOfDay to match component usage
+ */
+export const getPeakScanningTimes = getScansByTimeOfDay;

@@ -12,23 +12,26 @@ import {
   StatusBar,
   Platform,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { getAllCaptures, deleteCapture, clearAllCaptures, searchCaptures } from '../../services/storageService';
 import Icon from '../../components/Icon';
 
 export default function HistoryScreen() {
   const navigation = useNavigation();
+  const route = useRoute(); // Add useRoute
+  const { filterDate } = route.params || {}; // Get filterDate from params
+
   const [history, setHistory] = useState([]);
   const [filteredHistory, setFilteredHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Load history when screen comes into focus
+  // Load history when screen comes into focus or filterDate changes
   useFocusEffect(
     useCallback(() => {
       loadHistory();
-    }, [])
+    }, [filterDate]) // Add filterDate dependency
   );
 
   const loadHistory = async () => {
@@ -36,7 +39,18 @@ export default function HistoryScreen() {
       setIsLoading(true);
       const captures = await getAllCaptures();
       setHistory(captures);
-      setFilteredHistory(captures);
+      
+      // Apply date filter if present
+      if (filterDate) {
+        const filtered = captures.filter(item => {
+          const itemDate = new Date(item.timestamp).toISOString().split('T')[0];
+          return itemDate === filterDate;
+        });
+        setFilteredHistory(filtered);
+      } else {
+        setFilteredHistory(captures);
+      }
+      
       console.log('Loaded', captures.length, 'captures from database');
     } catch (error) {
       console.error('Load history error:', error);
@@ -44,6 +58,10 @@ export default function HistoryScreen() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const clearFilter = () => {
+    navigation.setParams({ filterDate: null });
   };
 
   const handleRefresh = async () => {
@@ -218,18 +236,30 @@ export default function HistoryScreen() {
             </View>
             <View>
               <Text style={styles.greeting}>Your scans</Text>
-              <Text style={styles.title}>History</Text>
+              <Text style={styles.title}>
+                {filterDate ? `History (${filterDate})` : 'History'}
+              </Text>
             </View>
           </View>
           
-          {history.length > 0 && (
-            <TouchableOpacity 
-              style={styles.clearButton}
-              onPress={handleClearAll}
-            >
-              <Icon name="trash-outline" family="Ionicons" size={20} color="#EF4444" />
-            </TouchableOpacity>
-          )}
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {filterDate && (
+              <TouchableOpacity 
+                style={styles.clearButton}
+                onPress={clearFilter}
+              >
+                <Icon name="filter-circle-outline" family="Ionicons" size={20} color="#EF4444" />
+              </TouchableOpacity>
+            )}
+            {history.length > 0 && (
+              <TouchableOpacity 
+                style={styles.clearButton}
+                onPress={handleClearAll}
+              >
+                <Icon name="trash-outline" family="Ionicons" size={20} color="#EF4444" />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
         
         {/* Search Bar */}

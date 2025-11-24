@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { getAllCaptures } from '../../services/storageService';
+import { loadProfile } from '../../services/profileService';
 import UserInfo from '../../components/HomeComponents/UserInfo';
 import SearchBar from '../../components/HomeComponents/SearchBar';
 import QuickTools from '../../components/HomeComponents/QuickTools';
@@ -18,13 +19,24 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const [search, setSearch] = useState('');
   const [recentScans, setRecentScans] = useState([]);
+  const [userName, setUserName] = useState('User');
 
-  // Load recent scans when screen comes into focus
+  // Load recent scans and profile when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       loadRecentScans();
+      loadUserName();
     }, [])
   );
+
+  const loadUserName = async () => {
+    try {
+      const profile = await loadProfile();
+      setUserName(profile.name);
+    } catch (error) {
+      console.error('Error loading user name:', error);
+    }
+  };
 
   const loadRecentScans = async () => {
     try {
@@ -67,8 +79,10 @@ export default function HomeScreen() {
 
   const handleToolPress = (id) => {
     if (id === 'history') navigation.navigate('History');
-    if (id === 'settings') navigation.navigate('Settings');
-    // favorites / offline / voice can be wired later
+    if (id === 'analytics') navigation.navigate('Analytics');
+    if (id === 'account') navigation.navigate('Account');
+    if (id === 'settings') navigation.navigate('Account', { screen: 'Settings' });
+    // favorites can be wired later
   };
 
   return (
@@ -81,7 +95,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <UserInfo
-          name="Iriz User"
+          name={userName}
           onNotificationsPress={() => {
             // hook up notifications later
           }}

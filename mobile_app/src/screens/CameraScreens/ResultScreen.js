@@ -7,7 +7,6 @@ import {
   ScrollView,
   Image,
   Alert,
-  Share,
   ActivityIndicator,
   Platform,
   StatusBar,
@@ -130,16 +129,6 @@ export default function ResultScreen() {
     }
   };
 
-  const handleShare = async () => {
-    try {
-      await Share.share({
-        message: allExtractedText || 'No text detected',
-      });
-    } catch (error) {
-      Alert.alert('Error', 'Failed to share text');
-    }
-  };
-
   const handleRetake = () => {
     Speech.stop();
     navigation.navigate('Camera');
@@ -149,6 +138,43 @@ export default function ResultScreen() {
     Speech.stop();
     navigation.navigate('Main', { screen: 'Home' });
   };
+
+  // Set header buttons
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={{ flexDirection: 'row', marginRight: 8, gap: 12 }}>
+          <TouchableOpacity
+            onPress={speakText}
+            style={{ padding: 8 }}
+          >
+            <Icon 
+              name={isSpeaking ? 'volume-high' : 'volume-medium'} 
+              family="Ionicons" 
+              size={24} 
+              color={isSpeaking ? '#0000FF' : '#1F2937'} 
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={isSaving || isSaved}
+            style={{ padding: 8 }}
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color="#0000FF" />
+            ) : (
+              <Icon 
+                name={isSaved ? 'checkmark-circle' : 'bookmark-outline'} 
+                family="Ionicons" 
+                size={24} 
+                color={isSaved ? '#4CAF50' : '#1F2937'} 
+              />
+            )}
+          </TouchableOpacity>
+        </View>
+      ),
+    });
+  }, [navigation, isSpeaking, isSaving, isSaved]);
 
   return (
     <View style={styles.container}>
@@ -167,54 +193,6 @@ export default function ResultScreen() {
       </View>
 
       <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Quick Actions Bar */}
-        <View style={styles.quickActionsBar}>
-          <TouchableOpacity
-            style={styles.quickAction}
-            onPress={speakText}
-          >
-            <View style={[styles.quickActionIcon, isSpeaking && styles.quickActionIconActive]}>
-              <Icon 
-                name={isSpeaking ? 'volume-high' : 'volume-medium'} 
-                family="Ionicons" 
-                size={20} 
-                color={isSpeaking ? '#FFFFFF' : '#0000FF'} 
-              />
-            </View>
-            <Text style={styles.quickActionText}>{isSpeaking ? 'Stop' : 'Listen'}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickAction}
-            onPress={handleSave}
-            disabled={isSaving || isSaved}
-          >
-            <View style={[styles.quickActionIcon, (isSaving || isSaved) && styles.quickActionIconDisabled]}>
-              {isSaving ? (
-                <ActivityIndicator size="small" color="#0000FF" />
-              ) : (
-                <Icon 
-                  name={isSaved ? 'checkmark-circle' : 'bookmark-outline'} 
-                  family="Ionicons" 
-                  size={20} 
-                  color={isSaved ? '#4CAF50' : '#0000FF'} 
-                />
-              )}
-            </View>
-            <Text style={styles.quickActionText}>{isSaved ? 'Saved' : isSaving ? 'Saving' : 'Save'}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickAction}
-            onPress={handleShare}
-          >
-            <View style={styles.quickActionIcon}>
-              <Icon name="share-social" family="Ionicons" size={20} color="#0000FF" />
-            </View>
-            <Text style={styles.quickActionText}>Share</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Detected Signboards */}
         {detections && detections.length > 0 && (
           <View style={styles.section}>
@@ -374,53 +352,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flex: 1,
-  },
-  // Quick Actions Bar
-  quickActionsBar: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  quickAction: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 8,
-  },
-  quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#F0F4FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#0000FF',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  quickActionIconActive: {
-    backgroundColor: '#0000FF',
-  },
-  quickActionIconDisabled: {
-    backgroundColor: '#F3F4F6',
-    opacity: 0.6,
-  },
-  quickActionText: {
-    fontSize: 12,
-    color: '#1F2937',
-    fontWeight: '600',
-    letterSpacing: -0.1,
   },
   // Section Styles
   section: {

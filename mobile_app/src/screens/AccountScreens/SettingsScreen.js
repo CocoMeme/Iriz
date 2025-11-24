@@ -27,8 +27,9 @@ export default function SettingsScreen() {
     highQuality: false,
     vibration: true,
     speechRate: 1.0,
+    showLanding: true,
+    developerMode: false,
   });
-  const [dbStats, setDbStats] = useState(null);
   const [cacheStats, setCacheStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -52,9 +53,7 @@ export default function SettingsScreen() {
 
   const loadStats = async () => {
     try {
-      const dbData = await getDatabaseStats();
       const cacheData = await getCacheStats();
-      setDbStats(dbData);
       setCacheStats(cacheData);
     } catch (error) {
       console.error('Load stats error:', error);
@@ -157,58 +156,6 @@ export default function SettingsScreen() {
     );
   };
 
-  const SettingItem = ({ iconName, iconFamily = 'Ionicons', title, subtitle, value, onToggle }) => (
-    <View style={styles.settingItem}>
-      <View style={styles.settingLeft}>
-        <View style={styles.iconContainer}>
-          <Icon name={iconName} family={iconFamily} size={24} color="#2196F3" />
-        </View>
-        <View style={styles.settingText}>
-          <Text style={styles.settingTitle}>{title}</Text>
-          {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
-        </View>
-      </View>
-      <Switch
-        value={value}
-        onValueChange={onToggle}
-        trackColor={{ false: '#E5E7EB', true: '#93C5FD' }}
-        thumbColor={value ? '#2196F3' : '#F3F4F6'}
-        ios_backgroundColor="#E5E7EB"
-      />
-    </View>
-  );
-
-  const ActionItem = ({ iconName, iconFamily = 'Ionicons', title, subtitle, onPress, danger = false }) => (
-    <TouchableOpacity
-      style={styles.actionItem}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <View style={styles.iconContainer}>
-        <Icon 
-          name={iconName} 
-          family={iconFamily} 
-          size={24} 
-          color={danger ? '#EF4444' : '#2196F3'} 
-        />
-      </View>
-      <View style={styles.settingText}>
-        <Text style={[styles.actionTitle, danger && styles.dangerText]}>
-          {title}
-        </Text>
-        {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
-      </View>
-      <Icon name="chevron-forward" family="Ionicons" size={20} color="#D1D5DB" />
-    </TouchableOpacity>
-  );
-
-  const StatItem = ({ label, value }) => (
-    <View style={styles.statItem}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
-    </View>
-  );
-
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -218,163 +165,264 @@ export default function SettingsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <Text style={styles.headerSubtitle}>Customize your experience</Text>
-      </View>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Icon name="arrow-back" family="Ionicons" size={24} color="#1D4ED8" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Settings</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
-      {/* Storage Stats */}
-      {(dbStats || cacheStats) && (
+        {/* Speech Settings */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>STORAGE</Text>
+          <Text style={styles.sectionTitle}>AUDIO & SPEECH</Text>
           <View style={styles.card}>
-            {dbStats && (
-              <>
-                <StatItem label="Total Captures" value={dbStats.totalCaptures} />
-                <View style={styles.separator} />
-                <StatItem 
-                  label="Average Confidence" 
-                  value={`${Math.round(dbStats.averageConfidence)}%`} 
-                />
-              </>
-            )}
-            {cacheStats && (
-              <>
-                <View style={styles.separator} />
-                <StatItem 
-                  label="Cache Size" 
-                  value={cacheStats.totalSizeFormatted} 
-                />
-                <View style={styles.separator} />
-                <StatItem 
-                  label="Images Stored" 
-                  value={cacheStats.captureCount} 
-                />
-              </>
-            )}
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <View style={styles.iconBox}>
+                  <Icon name="volume-high" family="Ionicons" size={20} color="#1D4ED8" />
+                </View>
+                <View style={styles.textContainer}>
+                  <Text style={styles.optionText}>Auto-speak Text</Text>
+                  <Text style={styles.optionSubtext}>Automatically read text after capture</Text>
+                </View>
+              </View>
+              <Switch
+                value={settings.autoSpeak}
+                onValueChange={() => toggleSetting('autoSpeak')}
+                trackColor={{ false: '#E5E7EB', true: '#93C5FD' }}
+                thumbColor={settings.autoSpeak ? '#2196F3' : '#F3F4F6'}
+                ios_backgroundColor="#E5E7EB"
+              />
+            </View>
+            
+            <View style={styles.separator} />
+            
+            <TouchableOpacity 
+              style={styles.option}
+              onPress={handleTestTTS}
+              activeOpacity={0.7}
+            >
+              <View style={styles.optionLeft}>
+                <View style={styles.iconBox}>
+                  <Icon name="mic" family="Ionicons" size={20} color="#1D4ED8" />
+                </View>
+                <View>
+                  <Text style={styles.optionText}>Test Text-to-Speech</Text>
+                  <Text style={styles.optionSubtext}>Hear a sample</Text>
+                </View>
+              </View>
+              <Icon name="chevron-forward-outline" family="Ionicons" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
           </View>
         </View>
-      )}
 
-      {/* Speech Settings */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>AUDIO & SPEECH</Text>
-        <View style={styles.card}>
-          <SettingItem
-            iconName="volume-high"
-            title="Auto-speak Text"
-            subtitle="Automatically read text after capture"
-            value={settings.autoSpeak}
-            onToggle={() => toggleSetting('autoSpeak')}
-          />
-          <View style={styles.separator} />
-          <ActionItem
-            iconName="mic"
-            title="Test Text-to-Speech"
-            subtitle="Hear a sample"
-            onPress={handleTestTTS}
-          />
+        {/* Camera Settings */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>CAMERA</Text>
+          <View style={styles.card}>
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <View style={styles.iconBox}>
+                  <Icon name="camera" family="Ionicons" size={20} color="#1D4ED8" />
+                </View>
+                <View style={styles.textContainer}>
+                  <Text style={styles.optionText}>High Quality Images</Text>
+                  <Text style={styles.optionSubtext}>Better accuracy, larger file size</Text>
+                </View>
+              </View>
+              <Switch
+                value={settings.highQuality}
+                onValueChange={() => toggleSetting('highQuality')}
+                trackColor={{ false: '#E5E7EB', true: '#93C5FD' }}
+                thumbColor={settings.highQuality ? '#2196F3' : '#F3F4F6'}
+                ios_backgroundColor="#E5E7EB"
+              />
+            </View>
+          </View>
         </View>
-      </View>
 
-      {/* Camera Settings */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>CAMERA</Text>
-        <View style={styles.card}>
-          <SettingItem
-            iconName="camera"
-            title="High Quality Images"
-            subtitle="Better accuracy, larger file size"
-            value={settings.highQuality}
-            onToggle={() => toggleSetting('highQuality')}
-          />
+        {/* General Settings */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>GENERAL</Text>
+          <View style={styles.card}>
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <View style={styles.iconBox}>
+                  <Icon name="phone-portrait-outline" family="Ionicons" size={20} color="#1D4ED8" />
+                </View>
+                <View style={styles.textContainer}>
+                  <Text style={styles.optionText}>Vibration Feedback</Text>
+                  <Text style={styles.optionSubtext}>Vibrate on capture and events</Text>
+                </View>
+              </View>
+              <Switch
+                value={settings.vibration}
+                onValueChange={() => toggleSetting('vibration')}
+                trackColor={{ false: '#E5E7EB', true: '#93C5FD' }}
+                thumbColor={settings.vibration ? '#2196F3' : '#F3F4F6'}
+                ios_backgroundColor="#E5E7EB"
+              />
+            </View>
+            
+            <View style={styles.separator} />
+            
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <View style={styles.iconBox}>
+                  <Icon name="information-circle-outline" family="Ionicons" size={20} color="#1D4ED8" />
+                </View>
+                <View style={styles.textContainer}>
+                  <Text style={styles.optionText}>Show Landing Page</Text>
+                  <Text style={styles.optionSubtext}>Display tutorial on app start</Text>
+                </View>
+              </View>
+              <Switch
+                value={settings.showLanding}
+                onValueChange={() => toggleSetting('showLanding')}
+                trackColor={{ false: '#E5E7EB', true: '#93C5FD' }}
+                thumbColor={settings.showLanding ? '#2196F3' : '#F3F4F6'}
+                ios_backgroundColor="#E5E7EB"
+              />
+            </View>
+
+            <View style={styles.separator} />
+
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <View style={styles.iconBox}>
+                  <Icon name="code-slash-outline" family="Ionicons" size={20} color="#1D4ED8" />
+                </View>
+                <View style={styles.textContainer}>
+                  <Text style={styles.optionText}>Developer Mode</Text>
+                  <Text style={styles.optionSubtext}>Enable advanced debugging tools</Text>
+                </View>
+              </View>
+              <Switch
+                value={settings.developerMode}
+                onValueChange={() => toggleSetting('developerMode')}
+                trackColor={{ false: '#E5E7EB', true: '#93C5FD' }}
+                thumbColor={settings.developerMode ? '#2196F3' : '#F3F4F6'}
+                ios_backgroundColor="#E5E7EB"
+              />
+            </View>
+          </View>
         </View>
-      </View>
 
-      {/* App Settings */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>GENERAL</Text>
-        <View style={styles.card}>
-          <SettingItem
-            iconName="phone-portrait"
-            iconFamily="Ionicons"
-            title="Vibration Feedback"
-            subtitle="Vibrate on capture and events"
-            value={settings.vibration}
-            onToggle={() => toggleSetting('vibration')}
-          />
+        {/* Data Management */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>DATA MANAGEMENT</Text>
+          <View style={styles.card}>
+            <TouchableOpacity 
+              style={styles.option}
+              onPress={handleExportData}
+              activeOpacity={0.7}
+            >
+              <View style={styles.optionLeft}>
+                <View style={styles.iconBox}>
+                  <Icon name="share-social" family="Ionicons" size={20} color="#1D4ED8" />
+                </View>
+                <View>
+                  <Text style={styles.optionText}>Export History</Text>
+                  <Text style={styles.optionSubtext}>Share your capture history</Text>
+                </View>
+              </View>
+              <Icon name="chevron-forward-outline" family="Ionicons" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+            
+            <View style={styles.separator} />
+            
+            <TouchableOpacity 
+              style={styles.option}
+              onPress={handleClearCache}
+              activeOpacity={0.7}
+            >
+              <View style={styles.optionLeft}>
+                <View style={styles.iconBox}>
+                  <Icon name="trash" family="Ionicons" size={20} color="#1D4ED8" />
+                </View>
+                <View>
+                  <Text style={styles.optionText}>Clear Image Cache</Text>
+                  <Text style={styles.optionSubtext}>{cacheStats ? cacheStats.totalSizeFormatted : 'Free up space'}</Text>
+                </View>
+              </View>
+              <Icon name="chevron-forward-outline" family="Ionicons" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
 
-      {/* Data Management */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>DATA MANAGEMENT</Text>
-        <View style={styles.card}>
-          <ActionItem
-            iconName="share-social"
-            title="Export History"
-            subtitle="Share your capture history"
-            onPress={handleExportData}
-          />
-          <View style={styles.separator} />
-          <ActionItem
-            iconName="trash"
-            title="Clear Image Cache"
-            subtitle={cacheStats ? cacheStats.totalSizeFormatted : 'Free up space'}
-            onPress={handleClearCache}
-          />
+        {/* About */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>ABOUT</Text>
+          <View style={styles.card}>
+            <TouchableOpacity 
+              style={styles.option}
+              onPress={() => Alert.alert('Version', 'Iriz Version 1.0.0\nBuild: 2025.01')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.optionLeft}>
+                <View style={styles.iconBox}>
+                  <Icon name="information-circle-outline" family="Ionicons" size={20} color="#1D4ED8" />
+                </View>
+                <View>
+                  <Text style={styles.optionText}>App Version</Text>
+                  <Text style={styles.optionSubtext}>Iriz v1.0.0</Text>
+                </View>
+              </View>
+              <Icon name="chevron-forward-outline" family="Ionicons" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+            
+            <View style={styles.separator} />
+            
+            <TouchableOpacity 
+              style={styles.option}
+              onPress={() => Alert.alert('Terms', 'Terms & Privacy Policy')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.optionLeft}>
+                <View style={styles.iconBox}>
+                  <Icon name="document-text-outline" family="Ionicons" size={20} color="#1D4ED8" />
+                </View>
+                <View>
+                  <Text style={styles.optionText}>Terms & Privacy</Text>
+                  <Text style={styles.optionSubtext}>View our policies</Text>
+                </View>
+              </View>
+              <Icon name="chevron-forward-outline" family="Ionicons" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+            
+            <View style={styles.separator} />
+            
+            <TouchableOpacity 
+              style={styles.option}
+              onPress={() => Alert.alert('Feedback', 'Thank you for your interest!')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.optionLeft}>
+                <View style={styles.iconBox}>
+                  <Icon name="chatbubble-ellipses-outline" family="Ionicons" size={20} color="#1D4ED8" />
+                </View>
+                <View>
+                  <Text style={styles.optionText}>Send Feedback</Text>
+                  <Text style={styles.optionSubtext}>Help us improve</Text>
+                </View>
+              </View>
+              <Icon name="chevron-forward-outline" family="Ionicons" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-
-      {/* About */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>ABOUT</Text>
-        <View style={styles.card}>
-          <ActionItem
-            iconName="information-circle"
-            title="App Version"
-            subtitle="Iriz v1.0.0"
-            onPress={() => Alert.alert('Version', 'Iriz Version 1.0.0\nBuild: 2025.01')}
-          />
-          <View style={styles.separator} />
-          <ActionItem
-            iconName="document-text"
-            title="Terms & Privacy"
-            subtitle="View our policies"
-            onPress={() => Alert.alert('Terms', 'Terms & Privacy Policy')}
-          />
-          <View style={styles.separator} />
-          <ActionItem
-            iconName="chatbubble-ellipses"
-            title="Send Feedback"
-            subtitle="Help us improve"
-            onPress={() => Alert.alert('Feedback', 'Thank you for your interest!')}
-          />
-        </View>
-      </View>
-
-      {/* Sign Out */}
-      <View style={styles.section}>
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          activeOpacity={0.8}
-        >
-          <Icon name="log-out" family="Ionicons" size={22} color="#FFFFFF" />
-          <Text style={styles.logoutText}>Sign Out</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Icon name="eye" family="Ionicons" size={32} color="#9CA3AF" />
-        <Text style={styles.footerText}>
-          Iriz - Empowering accessibility through innovation
-        </Text>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -387,29 +435,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  header: {
-    paddingTop: 20,
-    paddingHorizontal: 24,
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 24,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
   },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 6,
-    letterSpacing: -0.5,
-  },
-  headerSubtitle: {
-    fontSize: 15,
-    color: '#6B7280',
-    fontWeight: '400',
+    flex: 1,
+    textAlign: 'center',
   },
   section: {
-    marginTop: 24,
-    paddingHorizontal: 16,
+    marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 12,
@@ -431,121 +476,61 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
       },
       android: {
-        elevation: 2,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
       },
     }),
   },
-  settingItem: {
+  settingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#FFFFFF',
   },
   settingLeft: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 12,
   },
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     backgroundColor: '#E3F2FD',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 12,
   },
-  settingText: {
+  textContainer: {
     flex: 1,
   },
-  settingTitle: {
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  optionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  optionText: {
     fontSize: 16,
-    color: '#1F2937',
     fontWeight: '600',
+    color: '#1F2937',
     marginBottom: 4,
   },
-  settingSubtitle: {
-    fontSize: 14,
+  optionSubtext: {
+    fontSize: 13,
     color: '#6B7280',
-    lineHeight: 18,
-  },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-  },
-  actionTitle: {
-    fontSize: 16,
-    color: '#1F2937',
-    fontWeight: '600',
-  },
-  dangerText: {
-    color: '#EF4444',
-  },
-  statItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-  },
-  statLabel: {
-    fontSize: 16,
-    color: '#1F2937',
-    fontWeight: '500',
-  },
-  statValue: {
-    fontSize: 16,
-    color: '#2196F3',
-    fontWeight: '600',
+    fontWeight: '400',
   },
   separator: {
     height: 1,
     backgroundColor: '#F3F4F6',
-    marginLeft: 60,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 18,
-    backgroundColor: '#EF4444',
-    marginHorizontal: 16,
-    borderRadius: 16,
-    gap: 10,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#EF4444',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  logoutText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    letterSpacing: 0.2,
-  },
-  footer: {
-    paddingVertical: 40,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 40,
-  },
-  footerText: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginTop: 12,
+    marginLeft: 68,
   },
 });

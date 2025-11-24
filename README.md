@@ -148,3 +148,7 @@ For setup issues or questions, refer to the documentation in the `docs/` folder.
 ---
 
 **Built with ❤️ for accessibility and inclusion**
+
+## Running Backend Server Locally
+
+    cd backend; .\.venv\Scripts\Activate.ps1; python run.py

@@ -42,12 +42,13 @@ def detect_signboard():
             cropped_path = crop_signboard(image_path, det['bbox'], idx, timestamp)
             temp_files.append(cropped_path)
             cropped_url = upload_to_cloudinary(cropped_path)
-            extracted_text = extract_text_from_image(cropped_path)
+            extracted_text, ocr_confidence = extract_text_from_image(cropped_path)
             print(f"Cropped Image URL: {cropped_url}")
+            print(f"OCR Confidence: {ocr_confidence:.2f}%")
 
             results.append({
                 "bbox": det['bbox'],
-                "confidence": det['confidence'],
+                "confidence": ocr_confidence,  # Use OCR confidence instead of YOLO detection confidence
                 "class": det['class'],
                 "cropped_url": cropped_url,
                 "extracted_text": extracted_text

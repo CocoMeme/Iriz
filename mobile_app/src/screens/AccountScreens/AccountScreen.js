@@ -1,8 +1,32 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar, Alert } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from '../../components/Icon';
+import { loadProfile } from '../../services/profileService';
 
 export default function AccountScreen() {
+  const navigation = useNavigation();
+  const [profile, setProfile] = useState({
+    name: 'Iriz User',
+    email: 'user@iriz.app',
+    phone: '+1 (555) 123-4567',
+  });
+
+  // Load profile when screen focuses
+  useFocusEffect(
+    React.useCallback(() => {
+      loadProfileData();
+    }, [])
+  );
+
+  const loadProfileData = async () => {
+    try {
+      const savedProfile = await loadProfile();
+      setProfile(savedProfile);
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    }
+  };
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -13,17 +37,28 @@ export default function AccountScreen() {
         {/* Profile Section */}
         <View style={styles.profileSection}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>IU</Text>
+            <Text style={styles.avatarText}>
+              {profile.name
+                .split(' ')
+                .map(n => n[0])
+                .join('')
+                .toUpperCase()
+                .substring(0, 2)}
+            </Text>
           </View>
-          <Text style={styles.name}>Iriz User</Text>
-          <Text style={styles.email}>user@iriz.app</Text>
+          <Text style={styles.name}>{profile.name}</Text>
+          <Text style={styles.email}>{profile.email}</Text>
         </View>
 
         {/* Account Options */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>ACCOUNT</Text>
           <View style={styles.card}>
-            <TouchableOpacity style={styles.option}>
+            <TouchableOpacity 
+              style={styles.option}
+              onPress={() => navigation.navigate('EditProfile')}
+              activeOpacity={0.7}
+            >
               <View style={styles.optionLeft}>
                 <Icon name="person-outline" family="Ionicons" size={22} color="#1D4ED8" />
                 <Text style={styles.optionText}>Edit Profile</Text>
@@ -33,17 +68,25 @@ export default function AccountScreen() {
 
             <View style={styles.separator} />
 
-            <TouchableOpacity style={styles.option}>
+            <TouchableOpacity 
+              style={styles.option}
+              onPress={() => navigation.navigate('Settings')}
+              activeOpacity={0.7}
+            >
               <View style={styles.optionLeft}>
-                <Icon name="lock-closed-outline" family="Ionicons" size={22} color="#1D4ED8" />
-                <Text style={styles.optionText}>Privacy & Security</Text>
+                <Icon name="settings-outline" family="Ionicons" size={22} color="#1D4ED8" />
+                <Text style={styles.optionText}>Settings</Text>
               </View>
               <Icon name="chevron-forward-outline" family="Ionicons" size={20} color="#9CA3AF" />
             </TouchableOpacity>
 
             <View style={styles.separator} />
 
-            <TouchableOpacity style={styles.option}>
+            <TouchableOpacity 
+              style={styles.option}
+              onPress={() => navigation.navigate('Notifications')}
+              activeOpacity={0.7}
+            >
               <View style={styles.optionLeft}>
                 <Icon name="notifications-outline" family="Ionicons" size={22} color="#1D4ED8" />
                 <Text style={styles.optionText}>Notifications</Text>
@@ -55,7 +98,29 @@ export default function AccountScreen() {
 
         {/* Sign Out */}
         <View style={styles.section}>
-          <TouchableOpacity style={styles.signOutButton}>
+          <TouchableOpacity 
+            style={styles.signOutButton}
+            onPress={() => {
+              Alert.alert(
+                'Sign Out',
+                'Are you sure you want to sign out?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Sign Out',
+                    style: 'destructive',
+                    onPress: () => {
+                      navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'Login' }],
+                      });
+                    },
+                  },
+                ]
+              );
+            }}
+            activeOpacity={0.7}
+          >
             <Icon name="log-out-outline" family="Ionicons" size={22} color="#EF4444" />
             <Text style={styles.signOutText}>Sign Out</Text>
           </TouchableOpacity>

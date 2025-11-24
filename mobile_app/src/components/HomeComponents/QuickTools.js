@@ -5,8 +5,8 @@ import Icon from '../Icon';
 const tools = [
   { id: 'history', label: 'History', icon: 'time-outline' },
   { id: 'favorites', label: 'Favorites', icon: 'heart-outline' },
-  { id: 'offline', label: 'Offline', icon: 'cloud-offline-outline' },
-  { id: 'voice', label: 'Voice', icon: 'mic-outline' },
+  { id: 'analytics', label: 'Analytics', icon: 'bar-chart-outline' },
+  { id: 'account', label: 'Account', icon: 'person-outline' },
   { id: 'settings', label: 'Settings', icon: 'settings-outline' },
 ];
 

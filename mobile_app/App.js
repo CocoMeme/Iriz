@@ -109,14 +109,14 @@ export default function App() {
         <Stack.Screen 
           name="Result" 
           component={ResultScreen}
-          options={{ 
+          options={({ route }) => ({
             headerShown: true,
             title: 'Result',
             headerStyle: { backgroundColor: '#FFFFFF' },
             headerTintColor: '#1F2937',
             headerTitleStyle: { fontWeight: 'bold' },
             headerShadowVisible: true,
-          }}
+          })}
         />
         <Stack.Screen 
           name="Settings" 

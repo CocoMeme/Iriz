@@ -7,3 +7,4 @@ export * from './authService';
 export * from './ocrService';
 export * from './storageService';
 export * from './apiService';
+export * from './profileService';

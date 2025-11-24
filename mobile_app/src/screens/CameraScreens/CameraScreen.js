@@ -215,7 +215,7 @@ export default function CameraScreen() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <StatusBar hidden={true} barStyle="dark-content" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <PinchGestureHandler onGestureEvent={handlePinchGesture}>
         <View style={styles.container}>
           <CameraView
@@ -224,8 +224,8 @@ export default function CameraScreen() {
             ref={cameraRef}
             zoom={zoom}
             enableTorch={flash === 'on'}
-          >
-            <View style={styles.overlay}>
+          />
+          <View style={styles.overlay}>
               {/* Top Bar with Safe Area */}
               <View style={styles.topBar}>
                 <TouchableOpacity
@@ -305,7 +305,6 @@ export default function CameraScreen() {
                 </View>
               )}
             </View>
-          </CameraView>
 
           {/* Captured Photo Preview */}
           {capturedPhoto && (
@@ -374,7 +373,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   overlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'transparent',
   },
   // Top Bar Styles
